@@ -166,14 +166,12 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
 #
 ###########################################################################
 def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None):
-    filenames = []
-    filedates = []
 
     # If file list is given, download the files
     if csvFile is not None:
         file_subroutines.prepare_files(csvFile)
   
-    file_subroutines.get_file_list(filenames,filedates)
+    (filenames,filedates) = file_subroutines.get_file_list()
     
     print filenames
     print filedates
