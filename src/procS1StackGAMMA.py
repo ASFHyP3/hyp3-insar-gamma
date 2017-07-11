@@ -38,12 +38,14 @@ from lxml import etree
 import re
 import math
 from get_dem import get_dem
-from getSubSwath import get_bounding_box
+from getSubSwath import get_bounding_box_file
 from prepGamma import prepGamma
 from execute import execute
 from osgeo import gdal
 import zipfile
 import argparse
+import file_subroutines
+from getDemFor import getDemFile
 
 #####################
 #
@@ -51,45 +53,9 @@ import argparse
 #
 #####################
 
-def getDemFile(filelist,use_opentopo,rlooks):
-    mydir = "%s/annotation" %  filelist[0]
-    myxml = ""
-    name = ""
+def getDemFileGamma(filenames,use_opentopo,rlooks):
 
-    # Get corners from first and last swath
-    name = "001.xml"
-    for myfile in os.listdir(mydir):
-        if name in myfile:      
-            myxml = "%s/annotation/%s" % (filelist[0],myfile)
-    (lat1,lat2,lon1,lon2) = get_bounding_box(myxml)
-    name = "003.xml"
-    for myfile in os.listdir(mydir):
-        if name in myfile:      
-            myxml = "%s/annotation/%s" % (filelist[0],myfile)
-    (lat3,lat4,lon3,lon4) = get_bounding_box(myxml)
-
-    lon_max = -180
-    lon_min = 180
-    lat_max = -90
-    lat_min = 90
-
-    lat_max = max(lat1,lat2,lat3,lat4)
-    lat_min = min(lat1,lat2,lat3,lat4)
-    lon_max = max(lon1,lon2,lon3,lon4)
-    lon_min = min(lon1,lon2,lon3,lon4)
-
-    if use_opentopo == True:
-      cmd = "wget -Odem.tif \"http://opentopo.sdsc.edu/otr/getdem?demtype=SRTMGL1&west=%s&south=%s&east=%s&north=%s&outputFormat=GTiff\"" % (lon_min,lat_min,lon_max,lat_max)
-      execute(cmd)
-      zone = get_zone(lon_min,lon_max)  
-      if (lat_min+lat_max)/2 > 0:
-          proj = ('EPSG:326%02d' % int(zone))
-      else:
-          proj = ('EPSG:327%02d' % int(zone))
-      gdal.Warp("tmpdem.tif","dem.tif",dstSRS=proj,resampleAlg="cubic")
-      
-    else:
-      get_dem(lon_min,lat_min,lon_max,lat_max,"tmpdem.tif",True)
+    getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
 
     # If we downsized the SAR image, downsize the DEM file
     # if rlks == 1, then the SAR image is roughly 20 m square -> use native dem res
@@ -109,12 +75,6 @@ def getDemFile(filelist,use_opentopo,rlooks):
       cmd = "utm2dem.pl tmpdem2.tif big.dem big.par"
     execute(cmd)
     return("big")
-
-def get_zone(lon_min,lon_max):
-    center_lon = (lon_min+lon_max)/2;
-    zf = (center_lon+180)/6+1
-    zone = math.floor(zf)
-    return zone
 
 def getBurstOverlaps(mydir):
     t = re.split('_',mydir)
@@ -176,9 +136,7 @@ def getBurstOverlaps(mydir):
         size = size2
     else:
         size = size1
-
     return start1, start1+size-1, start2, start2+size-1
-
 
 def gammaProcess(mydir,dem,alooks,rlooks):
     cmd = 'cd %s; ' % mydir 
@@ -197,7 +155,7 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     os.symlink("../%s.par" % dem,"%s.par" % dem)
     os.chdir('..')
 
-#
+###########################################################################
 #  Main entry point --
 #
 # 	alooks = azimuth looks
@@ -206,64 +164,37 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
 #	dem = name of external DEM file 
 #	use_opentopo = flag for using opentopo instead of get_dem
 #
-def procS1StackGAMMA(alooks=20,rlooks=4,file=None,dem=None,use_opentopo=None):
-    filelist = []
-    filename = []
-    files = []
+###########################################################################
+def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None):
 
     # If file list is given, download the files
-    if file is not None:
-        cmd = "get_asf.py %s" % file
-        execute(cmd)
-        os.rmdir("download")
-
-        # Unzip any zip files found
-        for myfile in os.listdir("."):
-            if ".zip" in myfile:
-                zip_ref = zipfile.ZipFile(myfile, 'r')
-                zip_ref.extractall(".")
-                zip_ref.close()    
-                os.remove(myfile)
-
-    # Set up the list of files to process
-    i = 0
-    for myfile in os.listdir("."):
-        if ".SAFE" in myfile and os.path.isdir(myfile):
-            t = re.split('_+',myfile)
-            m = [myfile,t[4][0:8]]
-            files.append(m)
-            i = i+1
-	
-    print 'Found %s files to process' % i
-    files.sort(key = lambda row: row[1])
-    print files
-
-    for i in range(len(files)):
-        filelist.append(files[i][0])
-        filename.append(files[i][1])
+    if csvFile is not None:
+        file_subroutines.prepare_files(csvFile)
+  
+    (filenames,filedates) = file_subroutines.get_file_list()
     
-    print filelist
-    print filename
+    print filenames
+    print filedates
 
     # If no DEM is given, determine one from first file
     if dem is None:
-        dem = getDemFile(filelist,use_opentopo,rlooks)
+        dem = getDemFileGamma(filenames,use_opentopo,rlooks)
 
-    length=len(filelist)
+    length=len(filenames)
 
     # Make directory and link files for pairs and 2nd pairs
     for x in xrange(length-2):
-        makeDirAndLinks(filename[x],filename[x+1],filelist[x],filelist[x+1],dem)
-        makeDirAndLinks(filename[x],filename[x+2],filelist[x],filelist[x+2],dem)
+        makeDirAndLinks(filedates[x],filedates[x+1],filenames[x],filenames[x+1],dem)
+        makeDirAndLinks(filedates[x],filedates[x+2],filenames[x],filenames[x+2],dem)
 
     # If we have anything to process
     if (length > 1) :
         # Make directory and link files for last pair
-        makeDirAndLinks(filename[length-2],filename[length-1],filelist[length-2],filelist[length-1],dem)
+        makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
 
         # Run through directories processing ifgs as we go
         for mydir in os.listdir("."):
-            if len(mydir) == 17 and os.path.isdir(mydir):
+            if len(mydir) == 17 and os.path.isdir(mydir) and "_20" in mydir:
                 print "Processing directory %s" % mydir
                 gammaProcess(mydir,dem,alooks,rlooks)
 
@@ -272,11 +203,7 @@ def procS1StackGAMMA(alooks=20,rlooks=4,file=None,dem=None,use_opentopo=None):
         prepGamma()
 
 
-#####################
-#
-# Main Program
-#
-#####################
+###########################################################################
 
 if __name__ == '__main__':
 
@@ -289,5 +216,5 @@ if __name__ == '__main__':
   parser.add_argument("-a","--alooks",default=20,help="Number of azimuth looks (def=20)")
   args = parser.parse_args()
 
-  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,file=args.file,dem=args.dem,use_opentopo=args.o)
+  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o)
 
