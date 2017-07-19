@@ -380,6 +380,8 @@ open (my $fh2, '>', $filename) or die "Could not open file '$filename' $!";
 print $fh2 "baseline: $baseline\n";
 print $fh2 "utctime: $utctime\n";
 print $fh2 "heading: $heading\n";
+print $fh2 "range looks: $rlks\n";
+print $fh2 "azimuth looks: $azlks\n";
 close $fh2;
 
 copy($filename,"${prod_dir}/$filename") or die ("ERROR $0: Move Failed: $!");
