@@ -334,17 +334,21 @@ $prod_dir = "PRODUCT";
 mkdir $prod_dir;
 
 copy("$out_dir/$dirs[0].mli.geo.tif","${prod_dir}/${output}_amp.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.adf.unw.geo.bmp","${prod_dir}/${output}_phase.bmp") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.adf.unw.geo.bmp","${prod_dir}/${output}_unw_phase.bmp") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.adf.cc.geo.tif","${prod_dir}/${output}_corr.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${output}_vert_disp.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${output}_phase.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.diff0.man.adf.bmp.geo.tif","${prod_dir}/${output}_color_phase.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.diff0.man.adf.bmp.geo","${prod_dir}/${output}_color_phase.bmp") or die ("ERROR $0: Move failed: $!");
 
 chdir $prod_dir;
 
-$cmd = "gdal_translate -of PNG ${output}_phase.bmp ${output}_phase.png";
+$cmd = "gdal_translate -of PNG ${output}_unw_phase.bmp ${output}_unw_phase.png";
 execute($cmd,$log);
-unlink("${output}_phase.bmp") or died( "Could not remove ${output}_phase.bmp: $!");
+unlink("${output}_unw_phase.bmp") or die("Could not remove ${output}_unw_phase.bmp: $!");
+
+$cmd = "gdal_translate -of PNG ${output}_color_phase.bmp ${output}_color_phase.png";
+execute($cmd,$log);
+unlink("${output}_color_phase.bmp") or die("Could not remove ${output}_color_phase.bmp: $!");
 
 chdir("..");
 
@@ -380,6 +384,8 @@ open (my $fh2, '>', $filename) or die "Could not open file '$filename' $!";
 print $fh2 "baseline: $baseline\n";
 print $fh2 "utctime: $utctime\n";
 print $fh2 "heading: $heading\n";
+print $fh2 "range looks: $rlks\n";
+print $fh2 "azimuth looks: $azlks\n";
 close $fh2;
 
 copy($filename,"${prod_dir}/$filename") or die ("ERROR $0: Move Failed: $!");
