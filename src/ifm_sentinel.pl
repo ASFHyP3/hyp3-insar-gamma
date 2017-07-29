@@ -188,7 +188,7 @@ foreach my $l (@dirs) {
       }
     } else {
       if ($bursts != $save_bursts) {
-        print "ERROR: number of bursts do not match\n";
+        print "Warning: number of bursts do not match\n";
 	print "Using smaller of the two\n";
 	$bursts = ($bursts<$save_bursts) ? $bursts : $save_bursts
       }
@@ -340,13 +340,22 @@ copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${output}_vert_disp.t
 copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.diff0.man.adf.bmp.geo","${prod_dir}/${output}_color_phase.bmp") or die ("ERROR $0: Move failed: $!");
 
+$cmd = "gdal_translate -of KMLSUPEROVERLAY -co \"FORMAT=PNG\" -a_nodata \"0 0 0\" -expand rgb -outsize 0 1024 ${out_dir}/${output}.diff0.man.adf.bmp.geo.tif ${out_dir}/${output}_color_phase.kmz";
+execute($cmd,$log);
+copy("$out_dir/${output}_color_phase.kmz","${prod_dir}/${output}_color_phase.kmz") or die ("ERROR $0: Move failed: $!");
+
+$cmd = "gdal_translate -of KMLSUPEROVERLAY -co \"FORMAT=PNG\" -a_nodata \"0 0 0\" -expand rgb -outsize 0 1024 ${out_dir}/${output}.adf.unw.geo.bmp.tif ${out_dir}/${output}_unw_phase.kmz";
+execute($cmd,$log);
+copy("$out_dir/${output}_unw_phase.kmz","${prod_dir}/${output}_unw_phase.kmz") or die ("ERROR $0: Move failed: $!");
+
+
 chdir $prod_dir;
 
-$cmd = "gdal_translate -of PNG ${output}_unw_phase.bmp ${output}_unw_phase.png";
+$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${output}_unw_phase.bmp ${output}_unw_phase.png";
 execute($cmd,$log);
 unlink("${output}_unw_phase.bmp") or die("Could not remove ${output}_unw_phase.bmp: $!");
 
-$cmd = "gdal_translate -of PNG ${output}_color_phase.bmp ${output}_color_phase.png";
+$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${output}_color_phase.bmp ${output}_color_phase.png";
 execute($cmd,$log);
 unlink("${output}_color_phase.bmp") or die("Could not remove ${output}_color_phase.bmp: $!");
 
