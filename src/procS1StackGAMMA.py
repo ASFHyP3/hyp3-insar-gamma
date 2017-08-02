@@ -111,7 +111,7 @@ def getBurstOverlaps(mydir):
     found = 0
     x = time1[0]
     for y in time2:
-        if (abs(x-y) < 0.05):
+        if (abs(x-y) < 0.20):
             print "Found burst match at 1 %s" % cnt
             found = 1
             start1 = 1
@@ -122,7 +122,7 @@ def getBurstOverlaps(mydir):
         y = time2[0]
         cnt = 1
         for x in time1:
-            if (abs(x-y) < 0.05):
+            if (abs(x-y) < 0.20):
                 print "Found burst match at %s 1" % cnt
                 found = 1
                 start1 = cnt
