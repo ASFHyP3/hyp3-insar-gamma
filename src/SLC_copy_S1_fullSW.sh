@@ -14,24 +14,23 @@ then
     echo "$0: Preparing for the Sentinel-1 full swath SLC data, Organize folder and DEM"
     echo "                                                                       05/2015 W.G"
     echo " "
-    echo "USAGE: $0 <IFG_Folder> <SLC identifier> <SLC_TAB> <Burst Index-First> <Burst Index-Last> <Master/Slave>"
+    echo "USAGE: $0 <IFG_Folder> <SLC identifier> <SLC_TAB> <BURST_tab> <Master/Slave>"
     echo "       1. IFG_Folder   Absolute path of desination folder "
     echo "       2. SLC Id       SLC identifier (example: 20150429)"
     echo "       3. SLC_TAB      Corresponding SLC tab file"
     echo "                       1st row- iw1_SLC iw1_SLC_par iw1_TOPSAR_par"
     echo "                       2nd row- iw2_SLC iw2_SLC_par iw2_TOPSAR_par"
     echo "                       3rd row- iw3_SLC iw3_SLC_par iw3_TOPSAR_par"
-    echo "       4. Burst Id-1   Burst number of the first burst to copy in SLC swath"
-    echo "       5. Burst Id-2   Burst number of the last burst to copy in SLC swath"
-    echo "       6. M/S          Master/Slave image flag"
+    echo "       4. Burst TAB    Burst tab for which busrts to copy"
+    echo "       5. M/S          Master/Slave image flag"
     echo "                       input 1 for master"
     echo "                       input 2 for slave"
-    echo "       7. DEM_folder   Absolute path of DEM data folder"
-    echo "       8. DEM Id       DEM identifier (example, "Nepal" for Nepal.par Nepal.dem)"
-    echo "       9. raml         multi-look factor in range direction (default is 10) "
-    echo "       10.azml         multi-look factor in azimuth direction (default is 2)"
+    echo "       6. DEM_folder   Absolute path of DEM data folder"
+    echo "       7. DEM Id       DEM identifier (example, "Nepal" for Nepal.par Nepal.dem)"
+    echo "       8. raml         multi-look factor in range direction (default is 10) "
+    echo "       9. azml         multi-look factor in azimuth direction (default is 2)"
     echo ""
-    echo "EXAMPLE: $0 /import/c/w/gong/Kenny/S1_Nepal_coseismic/20150417_460B_20150429_7332/ 20150429  SLC_TAB 1 5 2 /import/c/w/gong/Kenny/DEM/Nepal/  final_Nepal"
+    echo "EXAMPLE: $0 /import/c/w/gong/Kenny/S1_Nepal_coseismic/20150417_460B_20150429_7332/ 20150429  SLC_TAB Burst_TAB 2 /import/c/w/gong/Kenny/DEM/Nepal/  final_Nepal"
     exit
 fi
 
@@ -39,8 +38,7 @@ fi
 path=$1
 slcname=$2
 tabin=$3
-burstu=$4
-burstl=$5
+burst_tab=$4
 raml=10
 azml=2
 msflag=1
@@ -50,27 +48,27 @@ msflag=1
 demovr1=2
 demovr2=2
 
+if [ "$#" -ge 5 ]; then
+msflag=$5
+fi
+
 if [ "$#" -ge 6 ]; then
-msflag=$6
+dempath=$6
 fi
 
 if [ "$#" -ge 7 ]; then
-dempath=$7
+demname=$7
 fi
 
 if [ "$#" -ge 8 ]; then
-demname=$8
+raml=${8}
 fi
 
-if [ "$#" -ge 9 ]; then
-raml=${9}
+if [ "$#" -gt 8 ]; then
+azml=${9}
 fi
 
-if [ "$#" -gt 9 ]; then
-azml=${10}
-fi
-
-tabout0=${tabin}_${burstu}_${burstl}
+tabout0=${tabin}
 
 echo "SLC_copy_S1_bash.sh $1 $2 $3 $4 $5 $6" > $path/SLC_copy_S1_bash_${msflag}.log
 echo ""
@@ -96,14 +94,8 @@ done <$tabin
 
 echo "##=============-  -================" >>$path/SLC_copy_S1_bash_${msflag}.log
 
-echo ${burstu} ${burstl} > BURST_tab
-echo ${burstu} ${burstl} >> BURST_tab
-echo ${burstu} ${burstl} >> BURST_tab
-# echo "2 10" >> BURST_tab
-
-
-echo "SLC_copy_S1_TOPS ${tabin}  ${tabout0}_sw${i} BURST_tab"
-SLC_copy_S1_TOPS ${tabin}  ${tabout0}_sw${i} BURST_tab >> $path/SLC_copy_S1_bash_${msflag}.log 
+echo "SLC_copy_S1_TOPS ${tabin}  ${tabout0}_sw${i} ${burst_tab}"
+SLC_copy_S1_TOPS ${tabin}  ${tabout0}_sw${i} ${burst_tab} >> $path/SLC_copy_S1_bash_${msflag}.log 
 #echo ""
 
 cp ${tabin} ${path}/
