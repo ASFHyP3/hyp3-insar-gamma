@@ -90,7 +90,7 @@ echo "-----------------Starting single iteration co-registration with LT--------
 #  cp offset_par.0 ${offfile}.temp
 
   echo "offset_pwr ${mname}.slc ${sname}.rslc ${mname}.slc.par ${sname}.rslc.par ${offfile}.temp offs snr 256 64 - 1 32 128 0.2"
-  offset_pwr ${mname}.slc ${sname}.rslc ${mname}.slc.par ${sname}.rslc.par ${offfile}.temp offs snr 512 256 - 1 16 64 0.2 4
+  offset_pwr ${mname}.slc ${sname}.rslc ${mname}.slc.par ${sname}.rslc.par ${offfile}.temp offs snr 512 256 - 1 16 64 0.2
 
   echo "offset_fit offs snr ${offfile}.temp - - 0.2 1 > ${offfile}.temp.log"
   offset_fit offs snr ${offfile}.temp - - 0.2 1 > ${offfile}.temp.log

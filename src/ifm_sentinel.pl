@@ -10,19 +10,16 @@ use Env qw(GAMMA_HOME);
 
 if (($#ARGV + 1) < 1) {die <<EOS ;}
 
-usage: $0 <options> output [azlks rnglks] [bs1 be1 bs2 be2]
+usage: $0 <options> output [azlks rnglks] [bm bs]
 	output		Output igram directory name
         azlks           Number of looks in azimuth (default 10)
         rlks            Number of looks in range (default 2)
-	bs1		Burst start for master scene
-	be1		Burst end for master scene
-	bs2		Burst start for slave scene
-	be2		Burst end for slave scene
+	bm		Master burst file
+	bs		Slave burst file
 	-d=dem 		(option) specify a DEM file to use (e.g. big for big.dem/big.par)
         -c		(option) cross pol processing - either hv or vh (default hh or vv)
 
 EOS
-
 
 print "\n\nSentinel1A differential interferogram creation program\n";
 
@@ -42,15 +39,11 @@ print $fh $msg;
 
 $rlks = 2;
 $azlks = 10;
-my @bs = (1, 1);
-my @be = (-1, -1);
 
 if($#ARGV >= 1) {$azlks = $ARGV[1]; print "Setting azimuth looks to $azlks\n";}
 if($#ARGV >= 2) {$rlks = $ARGV[2]; print "Setting range looks to $rlks\n";}
-if($#ARGV >= 3) {$bs[0] = $ARGV[3]; print "Setting burst start master to $bs[0]\n";}
-if($#ARGV >= 4) {$be[0] = $ARGV[4]; print "Setting burst end master to $be[0]\n";}
-if($#ARGV >= 5) {$bs[1] = $ARGV[5]; print "Setting burst start slave to $bs[1]\n";}
-if($#ARGV >= 6) {$be[1] = $ARGV[6]; print "Setting burst end slave to $be[1]\n";}
+if($#ARGV >= 3) {$bm = $ARGV[3]; print "Setting burst master file to $bm\n";}
+if($#ARGV >= 4) {$bs = $ARGV[4]; print "Setting burst slave file to $bs\n";}
 
 #
 # Ingest the data into Gamma format
@@ -204,10 +197,13 @@ foreach my $l (@dirs) {
     chdir("$l");
     print "\nEntering directory $l\n";
     print "  This is pass #$pass\n";
-    $start = $bs[$pass-1];
-    if ($be[$pass-1] == -1) { $end = $bursts; }
-    else { $end = $be[$pass-1]; }
-    $cmd = "SLC_copy_S1_fullSW.sh $WRK/$out_dir $l SLC_TAB $start $end $pass $WRK $dem $azlks $rlks";
+    if ($pass==1) {
+        copy("../$bm","$bm") or die ("ERROR $0: Copy failed: $!");
+        $cmd = "SLC_copy_S1_fullSW.sh $WRK/$out_dir $l SLC_TAB $bm $pass $WRK $dem $azlks $rlks";
+    } else {
+        copy("../$bs","$bs") or die ("ERROR $0: Copy failed: $!");
+        $cmd = "SLC_copy_S1_fullSW.sh $WRK/$out_dir $l SLC_TAB $bs $pass $WRK $dem $azlks $rlks";
+    }
     execute($cmd,"$log");
     chdir("..");
     $pass = $pass + 1;

@@ -111,6 +111,12 @@ rasmph_pwr ${ifgf}.adf $mname.mli $width
 echo "rascc ${ifgname}.adf.cc $mname.mli  $width 1 1 0 1 1 .1 .9 - - - ${ifgname}.adf.cc.ras"
 rascc ${ifgname}.adf.cc $mname.mli  $width 1 1 0 1 1 .1 .9 - - - ${ifgname}.adf.cc.ras
 
+echo "rascc_mask ${ifgname}.adf.cc $mname.mli $width 1 1 0 1 1 0.05"
+rascc_mask ${ifgname}.adf.cc $mname.mli $width 1 1 0 1 1 0.05
+
+# echo "mcf ${ifgf}.adf ${ifgname}.adf.cc ${ifgname}.adf.cc_mask.bmp ${ifgname}.adf.unw $width $tri 0 0 - - $npatr $npataz"
+# mcf ${ifgf}.adf ${ifgname}.adf.cc ${ifgname}.adf.cc_mask.bmp ${ifgname}.adf.unw $width $tri 0 0 - - $npatr $npataz  
+
 echo "mcf ${ifgf}.adf ${ifgname}.adf.cc - ${ifgname}.adf.unw $width $tri 0 0 - - $npatr $npataz"
 mcf ${ifgf}.adf ${ifgname}.adf.cc - ${ifgname}.adf.unw $width $tri 0 0 - - $npatr $npataz  
 
@@ -168,8 +174,8 @@ geocode_back ${ifgname}.adf.unw.ras $width $lt ${ifgname}.adf.unw.geo.bmp $demw 
 echo "data2geotiff $demfile ${ifgname}.adf.unw.geo.bmp 0 ${ifgname}.adf.unw.geo.bmp.tif"
 data2geotiff $demfile ${ifgname}.adf.unw.geo.bmp 0 ${ifgname}.adf.unw.geo.bmp.tif  
 
-echo "geocode_back ${ifgf}.adf.bmp $width $lt ${ifgf}.adf.bmp.geo $demw $demn 1 2"
-geocode_back ${ifgf}.adf.bmp $width $lt ${ifgf}.adf.bmp.geo $demw $demn 1 2
+echo "geocode_back ${ifgf}.adf.bmp $width $lt ${ifgf}.adf.bmp.geo $demw $demn 0 2"
+geocode_back ${ifgf}.adf.bmp $width $lt ${ifgf}.adf.bmp.geo $demw $demn 0 2
 
 echo "data2geotiff $demfile ${ifgf}.adf.bmp.geo 0 ${ifgf}.adf.bmp.geo.tif"
 data2geotiff $demfile ${ifgf}.adf.bmp.geo 0 ${ifgf}.adf.bmp.geo.tif

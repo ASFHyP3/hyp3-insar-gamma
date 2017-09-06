@@ -80,68 +80,79 @@ def getBurstOverlaps(mydir):
     t = re.split('_',mydir)
     master = t[0]
     slave = t[1]
-    time1 = []
-    time2 = []
-    os.chdir(mydir) 
-    for myfile in os.listdir("."):
-        if ".SAFE" in myfile and master in myfile:
-            os.chdir(myfile)
-            os.chdir("annotation")
-            for myfile2 in os.listdir("."):
-                if "001.xml" in myfile2:
-                    root = etree.parse(myfile2)
-                    for coord in root.iter('azimuthAnxTime'):
-                        time1.append(float(coord.text))
-                    for count in root.iter('burstList'):
-                        total_bursts1=int(count.attrib['count'])
-            os.chdir("../..")
-        elif ".SAFE" in myfile and slave in myfile:
-            os.chdir(myfile)
-            os.chdir("annotation")
-            for myfile2 in os.listdir("."):
-                if "001.xml" in myfile2:
-                    root = etree.parse(myfile2)
-                    for coord in root.iter('azimuthAnxTime'):
-                        time2.append(float(coord.text))
-                    for count in root.iter('burstList'):
-                        total_bursts2=int(count.attrib['count'])
-            os.chdir("../..")
+    os.chdir(mydir)
+    burst_tab1 = "%s_burst_tab" % master
+    f1 = open(burst_tab1,"w")
+    burst_tab2 = "%s_burst_tab" % slave
+    f2 = open(burst_tab2,"w")    
+    for name in ['001.xml','002.xml','003.xml']:
+        time1 = []
+        time2 = []
+        for myfile in os.listdir("."):
+            if ".SAFE" in myfile and master in myfile:
+                os.chdir(myfile)
+                os.chdir("annotation")
+                for myfile2 in os.listdir("."):
+                    if name in myfile2:
+                        root = etree.parse(myfile2)
+                        for coord in root.iter('azimuthAnxTime'):
+                            time1.append(float(coord.text))
+                        for count in root.iter('burstList'):
+                            total_bursts1=int(count.attrib['count'])
+                os.chdir("../..")
+            elif ".SAFE" in myfile and slave in myfile:
+                os.chdir(myfile)
+                os.chdir("annotation")
+                for myfile2 in os.listdir("."):
+                    if name in myfile2:
+                        root = etree.parse(myfile2)
+                        for coord in root.iter('azimuthAnxTime'):
+                            time2.append(float(coord.text))
+                        for count in root.iter('burstList'):
+                            total_bursts2=int(count.attrib['count'])
+                os.chdir("../..")
 
-    cnt = 1
-    found = 0
-    x = time1[0]
-    for y in time2:
-        if (abs(x-y) < 0.20):
-            print "Found burst match at 1 %s" % cnt
-            found = 1
-            start1 = 1
-            start2 = cnt
-        cnt += 1
-
-    if found == 0:
-        y = time2[0]
         cnt = 1
-        for x in time1:
+        found = 0
+        x = time1[0]
+        for y in time2:
             if (abs(x-y) < 0.20):
-                print "Found burst match at %s 1" % cnt
+                print "Found burst match at 1 %s" % cnt
                 found = 1
-                start1 = cnt
-                start2 = 1
+                start1 = 1
+                start2 = cnt
             cnt += 1
 
-    size1 = total_bursts1 - start1 + 1
-    size2 = total_bursts2 - start2 + 1
+        if found == 0:
+            y = time2[0]
+            cnt = 1
+            for x in time1:
+                if (abs(x-y) < 0.20):
+                    print "Found burst match at %s 1" % cnt
+                    found = 1
+                    start1 = cnt
+                    start2 = 1
+                cnt += 1
 
-    if (size1 > size2):
-        size = size2
-    else:
-        size = size1
-    return start1, start1+size-1, start2, start2+size-1
+        size1 = total_bursts1 - start1 + 1
+        size2 = total_bursts2 - start2 + 1
+
+        if (size1 > size2):
+            size = size2
+        else:
+            size = size1
+        
+        f1.write("%s %s\n" % (start1, start1+size-1))
+        f2.write("%s %s\n" % (start2, start2+size-1))
+        
+    f1.close()
+    f2.close()
+    return(burst_tab1,burst_tab2)
 
 def gammaProcess(mydir,dem,alooks,rlooks):
     cmd = 'cd %s; ' % mydir 
-    (s1,e1,s2,e2) = getBurstOverlaps(mydir)
-    cmd = cmd + 'ifm_sentinel.pl -d=%s IFM %s %s %s %s %s %s ' % (dem,alooks,rlooks,s1,e1,s2,e2)
+    (burst_tab1,burst_tab2) = getBurstOverlaps(mydir)
+    cmd = cmd + 'ifm_sentinel.pl -d=%s IFM %s %s %s %s ' % (dem,alooks,rlooks,burst_tab1,burst_tab2)
     execute(cmd)
 
 def makeDirAndLinks(name1,name2,file1,file2,dem):
