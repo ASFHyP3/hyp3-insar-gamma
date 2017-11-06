@@ -44,6 +44,8 @@ from execute import execute
 from osgeo import gdal
 import zipfile
 import argparse
+import commands
+import glob
 import file_subroutines
 from getDemFor import getDemFile
 
@@ -166,6 +168,56 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     os.symlink("../%s.par" % dem,"%s.par" % dem)
     os.chdir('..')
 
+def makeParameterFile(mydir,alooks,rlooks):
+    res = 20 * rlooks        
+    
+    if os.path.isdir("DEM"):
+        string = commands.getstatusoutput('gdalinfo %s' % glob.glob("DEM/*.tif")[0])
+        lst = string[1].split("\n")
+        for item in lst:
+            if "GEOGCS" in item:
+                if "WGS 84" in item:
+                    demtype = 'SRTMGL'
+                    print demtype
+                else:
+                    demtype = 'NED'
+                    print demtype
+        for item in lst:
+            if "Pixel Size" in item:
+                print item
+                if demtype == 'SRTMGL':
+                    if "0.000277777777780" in item:
+                        number = '1'
+                    else:
+                        number = '3'
+                else:
+                    if "0.000092592592" in item:
+                        number = '13'
+                    elif "0.00027777777" in item:
+                        number = '1'
+                    else:
+                        number = '2'
+        demtype = demtype + number
+    else:
+        demtype = "Unknown"
+
+    os.chdir("%s/PRODUCT" % mydir)
+    name = "%s.txt" % mydir
+    f = open(name,'a')
+    f.write('INSAR phase filter:  adf\n')
+    f.write('phase filter parameter: 0.6\n')
+    f.write('resolution of output (m): %s\n' % res)
+    f.write('range bandpass filter: no\n')
+    f.write('azimuth bandpass filter: no\n')
+    f.write('DEM source: %s\n' % demtype)
+    f.write('DEM resolution (m): %s\n' % (res*2))
+    f.write('Unwrapping type: mcf\n')
+    f.write('Unwrapping threshold: none\n')
+    f.write('Speckle filtering: off\n')
+    f.close()
+    os.chdir("../..")  
+    
+
 ###########################################################################
 #  Main entry point --
 #
@@ -208,6 +260,7 @@ def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None)
             if len(mydir) == 17 and os.path.isdir(mydir) and "_20" in mydir:
                 print "Processing directory %s" % mydir
                 gammaProcess(mydir,dem,alooks,rlooks)
+                makeParameterFile(mydir,alooks,rlooks)
 
     # Clip results to same bounding box
     if (length > 2):
