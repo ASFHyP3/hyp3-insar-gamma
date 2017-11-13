@@ -329,71 +329,41 @@ close(HDF5_LIST);
 $prod_dir = "PRODUCT";
 mkdir $prod_dir;
 
-copy("$out_dir/$dirs[0].mli.geo.tif","${prod_dir}/${output}_amp.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.adf.unw.geo.bmp","${prod_dir}/${output}_unw_phase.bmp") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.adf.cc.geo.tif","${prod_dir}/${output}_corr.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${output}_vert_disp.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.diff0.man.adf.bmp.geo","${prod_dir}/${output}_color_phase.bmp") or die ("ERROR $0: Move failed: $!");
+my @files = glob "S1*.SAFE";
+@master_list = split /_/, $files[0];
+$master_date = $master_list[5];
+print "Master date $master_date\n";
+@slave_list = split /_/, $files[1];
+$slave_date = $slave_list[5];
+print "Slave date $slave_date\n";
+
+my $long_output = "${master_date}_${slave_date}";
+
+copy("$out_dir/$dirs[0].mli.geo.tif","${prod_dir}/${long_output}_amp.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.adf.unw.geo.bmp","${prod_dir}/${long_output}_unw_phase.bmp") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.adf.cc.geo.tif","${prod_dir}/${long_output}_corr.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${long_output}_vert_disp.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${long_output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/$output.diff0.man.adf.bmp.geo","${prod_dir}/${long_output}_color_phase.bmp") or die ("ERROR $0: Move failed: $!");
 
 $cmd = "gdal_translate -of KMLSUPEROVERLAY -co \"FORMAT=PNG\" -a_nodata \"0 0 0\" -expand rgb -outsize 0 1024 ${out_dir}/${output}.diff0.man.adf.bmp.geo.tif ${out_dir}/${output}_color_phase.kmz";
 execute($cmd,$log);
-copy("$out_dir/${output}_color_phase.kmz","${prod_dir}/${output}_color_phase.kmz") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/${output}_color_phase.kmz","${prod_dir}/${long_output}_color_phase.kmz") or die ("ERROR $0: Move failed: $!");
 
 $cmd = "gdal_translate -of KMLSUPEROVERLAY -co \"FORMAT=PNG\" -a_nodata \"0 0 0\" -expand rgb -outsize 0 1024 ${out_dir}/${output}.adf.unw.geo.bmp.tif ${out_dir}/${output}_unw_phase.kmz";
 execute($cmd,$log);
-copy("$out_dir/${output}_unw_phase.kmz","${prod_dir}/${output}_unw_phase.kmz") or die ("ERROR $0: Move failed: $!");
+copy("$out_dir/${output}_unw_phase.kmz","${prod_dir}/${long_output}_unw_phase.kmz") or die ("ERROR $0: Move failed: $!");
 
 
 chdir $prod_dir;
 
-$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${output}_unw_phase.bmp ${output}_unw_phase.png";
+$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${long_output}_unw_phase.bmp ${long_output}_unw_phase.png";
 execute($cmd,$log);
-unlink("${output}_unw_phase.bmp") or die("Could not remove ${output}_unw_phase.bmp: $!");
+unlink("${long_output}_unw_phase.bmp") or die("Could not remove ${long_output}_unw_phase.bmp: $!");
 
-$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${output}_color_phase.bmp ${output}_color_phase.png";
+$cmd = "gdal_translate -of PNG -a_nodata \"0 0 0\" -outsize 0 1024 ${long_output}_color_phase.bmp ${long_output}_color_phase.png";
 execute($cmd,$log);
-unlink("${output}_color_phase.bmp") or die("Could not remove ${output}_color_phase.bmp: $!");
-
-chdir("..");
-
-my $lines = `cat IFM/baseline.log`;
-my @line = split /\n/, $lines;
-foreach my $text (@line) {
-    if ($text =~ m/estimated baseline perpendicular component \(m\), rate \(m\/s\):\s+(\S+)/) {
-        $baseline = $1;
-    }
-}
-
-my $lines = `cat IFM.log`;
-my @line = split /\n/, $lines;
-foreach my $text (@line) {
-    if ($text =~ m/SLC image first line UTC time stamp:/) {
-        @a = split(": ",$text);
-	$utctime = $a[2];
-	last;
-    }
-}
-
-$file = "IFM/$dirs[0].mli.par";
-my $lines = `cat $file`;
-my @line = split /\n/, $lines;
-foreach my $text (@line) {
-    if ($text =~ m/heading:\s+(\S+)/) {
-	 $heading = $1;
-    }
-}
-
-my $filename = "$dirs[0]_$dirs[1].txt";
-open (my $fh2, '>', $filename) or die "Could not open file '$filename' $!";
-print $fh2 "baseline: $baseline\n";
-print $fh2 "utctime: $utctime\n";
-print $fh2 "heading: $heading\n";
-print $fh2 "range looks: $rlks\n";
-print $fh2 "azimuth looks: $azlks\n";
-close $fh2;
-
-copy($filename,"${prod_dir}/$filename") or die ("ERROR $0: Move Failed: $!");
+unlink("${long_output}_color_phase.bmp") or die("Could not remove ${long_output}_color_phase.bmp: $!");
 
 $datestring = localtime();
 my $msg = "$datestring - Done!!!\n";
