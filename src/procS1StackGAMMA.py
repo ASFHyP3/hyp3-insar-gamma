@@ -178,13 +178,10 @@ def makeParameterFile(mydir,alooks,rlooks):
             if "GEOGCS" in item:
                 if "WGS 84" in item:
                     demtype = 'SRTMGL'
-                    print demtype
                 else:
                     demtype = 'NED'
-                    print demtype
         for item in lst:
             if "Pixel Size" in item:
-                print item
                 if demtype == 'SRTMGL':
                     if "0.000277777777780" in item:
                         number = '1'
@@ -201,14 +198,54 @@ def makeParameterFile(mydir,alooks,rlooks):
     else:
         demtype = "Unknown"
 
-    os.chdir("%s/PRODUCT" % mydir)
+    os.chdir("%s" % mydir)
+    master_date = mydir[:15]
+    slave_date = mydir[17:]
+    
+    master_file = glob.glob("*%s*.SAFE" % master_date)[0]
+    slave_file = glob.glob("*%s*.SAFE" % slave_date)[0]
+    master_file = master_file.replace(".SAFE","")
+    slave_file = slave_file.replace(".SAFE","")
+
+    f = open("IFM/baseline.log","r")
+    for line in f:
+        if "estimated baseline perpendicular component" in line:
+            t = re.split(":",line)
+            s = re.split("\s+",t[1])
+            baseline = float(s[1])
+    f.close
+    
+    f = open("IFM.log","r")
+    for line in f:
+        if "SLC image first line UTC time stamp" in line:
+            t = re.split(":",line)
+            utctime = float(t[2])
+    f.close
+    
+    name = "IFM/" + master_date[:8] + ".mli.par"
+    f = open(name,"r")
+    for line in f:
+        if "heading" in line:
+            t = re.split(":",line)
+            s = re.split("\s+",t[1])
+            heading = float(s[1])
+    f.close
+    
+    os.chdir("PRODUCT")
     name = "%s.txt" % mydir
-    f = open(name,'a')
+    f = open(name,'w')
+    f.write('Master Granule: %s\n' % master_file)
+    f.write('Slave Granule: %s\n' % slave_file)
+    f.write('Baseline: %s\n' % baseline)
+    f.write('UTCtime: %s\n' % utctime)
+    f.write('Heading: %s\n' % heading)
+    f.write('Range looks: %s\n' % rlooks)
+    f.write('Azimuth looks: %s\n' % alooks)
     f.write('INSAR phase filter:  adf\n')
-    f.write('phase filter parameter: 0.6\n')
-    f.write('resolution of output (m): %s\n' % res)
-    f.write('range bandpass filter: no\n')
-    f.write('azimuth bandpass filter: no\n')
+    f.write('Phase filter parameter: 0.6\n')
+    f.write('Resolution of output (m): %s\n' % res)
+    f.write('Range bandpass filter: no\n')
+    f.write('Azimuth bandpass filter: no\n')
     f.write('DEM source: %s\n' % demtype)
     f.write('DEM resolution (m): %s\n' % (res*2))
     f.write('Unwrapping type: mcf\n')
@@ -257,7 +294,7 @@ def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None)
 
         # Run through directories processing ifgs as we go
         for mydir in os.listdir("."):
-            if len(mydir) == 17 and os.path.isdir(mydir) and "_20" in mydir:
+            if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
                 print "Processing directory %s" % mydir
                 gammaProcess(mydir,dem,alooks,rlooks)
                 makeParameterFile(mydir,alooks,rlooks)
