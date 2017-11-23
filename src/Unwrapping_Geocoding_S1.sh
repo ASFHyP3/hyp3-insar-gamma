@@ -201,6 +201,8 @@ geocode_back ${ifgname}.vert.disp $width $lt ${ifgname}.vert.disp.geo $demw $dem
 echo "data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.org.tif"
 data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.org.tif
 
+echo "data2geotiff $demfile DEM/inc 2 ${ifgname}.inc.tif"
+data2geotiff $demfile DEM/inc 2 ${ifgname}.inc.tif
 
 # generate look vector
 look_vector $mname.mli.par ${ifgname}.off.it $demfile $dem lv_theta lv_phi

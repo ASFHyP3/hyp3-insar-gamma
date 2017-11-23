@@ -151,10 +151,13 @@ def getBurstOverlaps(mydir):
     f2.close()
     return(burst_tab1,burst_tab2)
 
-def gammaProcess(mydir,dem,alooks,rlooks):
+def gammaProcess(mydir,dem,alooks,rlooks,inc_flag):
     cmd = 'cd %s; ' % mydir 
     (burst_tab1,burst_tab2) = getBurstOverlaps(mydir)
-    cmd = cmd + 'ifm_sentinel.pl -d=%s IFM %s %s %s %s ' % (dem,alooks,rlooks,burst_tab1,burst_tab2)
+    if inc_flag:
+        cmd = cmd + 'ifm_sentinel.pl -i -d=%s IFM %s %s %s %s ' % (dem,alooks,rlooks,burst_tab1,burst_tab2)
+    else:
+        cmd = cmd + 'ifm_sentinel.pl -d=%s IFM %s %s %s %s ' % (dem,alooks,rlooks,burst_tab1,burst_tab2)
     execute(cmd)
 
 def makeDirAndLinks(name1,name2,file1,file2,dem):
@@ -265,7 +268,7 @@ def makeParameterFile(mydir,alooks,rlooks):
 #	use_opentopo = flag for using opentopo instead of get_dem
 #
 ###########################################################################
-def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None):
+def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None,inc_flag=None):
 
     # If file list is given, download the files
     if csvFile is not None:
@@ -296,7 +299,7 @@ def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None)
         for mydir in os.listdir("."):
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
                 print "Processing directory %s" % mydir
-                gammaProcess(mydir,dem,alooks,rlooks)
+                gammaProcess(mydir,dem,alooks,rlooks,inc_flag)
                 makeParameterFile(mydir,alooks,rlooks)
 
     # Clip results to same bounding box
@@ -312,10 +315,11 @@ if __name__ == '__main__':
     description='Process a stack of Sentinel-1 data into interferograms using GAMMA software')
   parser.add_argument("-f","--file",help="Read image names from CSV file, otherwise will automatically process all SAFE files in your current directory")
   parser.add_argument("-d","--dem",help="Input DEM file to use, otherwise will calculate a bounding box and use get_dem")
+  parser.add_argument("-i",action="store_true",help="Create incidence angle file")
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-r","--rlooks",default=4,help="Number of range looks (def=4)")
   parser.add_argument("-a","--alooks",default=20,help="Number of azimuth looks (def=20)")
   args = parser.parse_args()
 
-  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o)
+  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i)
 
