@@ -143,9 +143,11 @@ echo "GC_map_mod ../${slcname}.mli.par  - $dempath/${demname}.par $dempath/${dem
 	echo "geocode MAP2RDC demseg $demwidth HGT_SAR_${raml}_${azml} $mliwidth $mlinline"
 	geocode MAP2RDC demseg $demwidth HGT_SAR_${raml}_${azml} $mliwidth $mlinline #>> $path/SLC_copy_S1_bash_${msflag}.log
 
-
 	echo "GC_map_mod ../${slcname}.mli.par  - $dempath/${demname}.par $dempath/${demname}.dem $demovr1 $demovr2 demseg.par demseg ../${slcname}.mli  MAP2RDC inc pix ls_map 1 1" > geocode.log
 	echo "geocode MAP2RDC demseg $demwidth HGT_SAR_${raml}_${azml} $mliwidth $mlinline" >> geocode.log
+
+        gc_map ../${slcname}.mli.par - demseg.par 1 new_seg.par lut - - sim u v inc psi pix ls_map
+
 	cd ..
 fi
 echo ""
