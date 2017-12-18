@@ -172,7 +172,7 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     os.chdir('..')
 
 def makeParameterFile(mydir,alooks,rlooks):
-    res = 20 * rlooks        
+    res = 20 * int(rlooks)        
     
     if os.path.isdir("DEM"):
         string = commands.getstatusoutput('gdalinfo %s' % glob.glob("DEM/*.tif")[0])
