@@ -19,13 +19,14 @@ usage: $0 <options> output [azlks rnglks] [bm bs]
 	-d=dem 		(option) specify a DEM file to use (e.g. big for big.dem/big.par)
         -c		(option) cross pol processing - either hv or vh (default hh or vv)
         -i              (option) create incidence angle map corrected for earth curvature
+        -l              (option) create look vector theta and phi 
 
 EOS
 
 print "\n\nSentinel1A differential interferogram creation program\n";
 
 my $dem = '';
-GetOptions ('d=s' => \$dem , 'c' => \$cp_flag, 'i' => \$inc_flag);
+GetOptions ('d=s' => \$dem , 'c' => \$cp_flag, 'i' => \$inc_flag, 'l' => \$look_flag);
 
 my $out_dir = $ARGV[0];
 print "Creating output interferogram directory $out_dir\n\n";
@@ -342,6 +343,10 @@ copy("$out_dir/$output.adf.cc.geo.tif","${prod_dir}/${long_output}_corr.tif") or
 copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${long_output}_vert_disp.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${long_output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
 if ($inc_flag) { copy("$out_dir/$output.inc.tif","${prod_dir}/${long_output}_inc.tif") or die ("ERROR $0: Move failed: $!");}
+if ($look_flag) { 
+    copy("$out_dir/$output.lv_theta.tif","${prod_dir}/${long_output}_lv_theta.tif") or die ("ERROR $0: Move failed: $!");
+    copy("$out_dir/$output.lv_phi.tif","${prod_dir}/${long_output}_lv_phi.tif") or die ("ERROR $0: Move failed: $!");
+}
 $cmd = "makeAsfBrowse.py ${out_dir}/${output}.diff0.man.adf.bmp.geo.tif ${prod_dir}/${long_output}_color_phase";
 execute($cmd,"$log");
 $cmd = "makeAsfBrowse.py ${out_dir}/${output}.adf.unw.geo.bmp.tif ${prod_dir}/${long_output}_unw_phase";

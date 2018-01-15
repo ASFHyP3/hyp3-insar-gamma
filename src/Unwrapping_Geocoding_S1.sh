@@ -67,6 +67,7 @@ wrk=`pwd`
 
 dem=./DEM/demseg
 demfile=./DEM/demseg.par  #./DEM/HGT_SAR_10_2
+newseg=./DEM/new_seg.par
 lt=./DEM/MAP2RDC
 ifgname=${mname}_${sname} #.diff0.it #20141003_20141015
 
@@ -202,10 +203,22 @@ echo "data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.
 data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.org.tif
 
 echo "data2geotiff $demfile DEM/inc 2 ${ifgname}.inc.tif"
-data2geotiff $demfile DEM/inc 2 ${ifgname}.inc.tif
+data2geotiff $demfile DEM/inc_flat 2 ${ifgname}.inc.tif
 
 # generate look vector
 look_vector $mname.mli.par ${ifgname}.off.it $demfile $dem lv_theta lv_phi
+
+# echo "geocode_back lv_theta $width $lt ${ifgname}.lv_theta.geo $demw $demn 0 0"
+# geocode_back lv_theta $width $lt ${ifgname}.lv_theta.geo $demw $demn 0 0
+
+echo "data2geotiff $demfile lv_theta 2 ${ifgname}.lv_theta.tif"
+data2geotiff $demfile lv_theta 2 ${ifgname}.lv_theta.tif
+
+# echo "geocode_back lv_phi $width $lt ${ifgname}.lv_phi.geo $demw $demn 0 0"
+# geocode_back lv_phi $width $lt ${ifgname}.lv_phi.geo $demw $demn 0 0
+
+echo "data2geotiff $demfile lv_phi 2 ${ifgname}.lv_phi.tif"
+data2geotiff $demfile lv_phi 2 ${ifgname}.lv_phi.tif
 
 proj=`grep DEM_projection:  $demfile | awk '{print $2}'`
 
