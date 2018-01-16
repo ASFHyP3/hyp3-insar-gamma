@@ -146,7 +146,8 @@ echo "GC_map_mod ../${slcname}.mli.par  - $dempath/${demname}.par $dempath/${dem
 	echo "GC_map_mod ../${slcname}.mli.par  - $dempath/${demname}.par $dempath/${demname}.dem $demovr1 $demovr2 demseg.par demseg ../${slcname}.mli  MAP2RDC inc pix ls_map 1 1" > geocode.log
 	echo "geocode MAP2RDC demseg $demwidth HGT_SAR_${raml}_${azml} $mliwidth $mlinline" >> geocode.log
 
-        gc_map ../${slcname}.mli.par - demseg.par 1 new_seg.par lut - - sim u v inc psi pix ls_map
+	# Create flat earth incidence angle file
+        gc_map ../${slcname}.mli.par - $dempath/${demname}.par 1 demseg.par demseg map_to_rdc 2 2 pwr_sim_map - - inc_flat
 
 	cd ..
 fi
