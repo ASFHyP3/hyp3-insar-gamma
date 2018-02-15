@@ -8,7 +8,7 @@
 #  Create by W.G, 2015
 #
 #
-if [ "$#" -le 7 ]
+if [ "$#" -le 4 ]
 then
     echo " "
     echo "$0: Preparing for the Sentinel-1 full swath SLC data, Organize folder and DEM"
