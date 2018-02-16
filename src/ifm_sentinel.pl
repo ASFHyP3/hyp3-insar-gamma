@@ -20,13 +20,14 @@ usage: $0 <options> output [azlks rnglks] [bm bs]
         -c		(option) cross pol processing - either hv or vh (default hh or vv)
         -i              (option) create incidence angle map corrected for earth curvature
         -l              (option) create look vector theta and phi 
+        -s              (option) create line of sight displacement file
 
 EOS
 
 print "\n\nSentinel1A differential interferogram creation program\n";
 
 my $dem = '';
-GetOptions ('d=s' => \$dem , 'c' => \$cp_flag, 'i' => \$inc_flag, 'l' => \$look_flag);
+GetOptions ('d=s' => \$dem , 'c' => \$cp_flag, 'i' => \$inc_flag, 'l' => \$look_flag, 's' => \$los_flag);
 
 my $out_dir = $ARGV[0];
 print "Creating output interferogram directory $out_dir\n\n";
@@ -341,8 +342,8 @@ my $long_output = "${master_date}_${slave_date}";
 copy("$out_dir/$dirs[0].mli.geo.tif","${prod_dir}/${long_output}_amp.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.adf.cc.geo.tif","${prod_dir}/${long_output}_corr.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.vert.disp.geo.org.tif","${prod_dir}/${long_output}_vert_disp.tif") or die ("ERROR $0: Move failed: $!");
-copy("$out_dir/$output.los.disp.geo.org.tif","${prod_dir}/${long_output}_los_disp.tif") or die ("ERROR $0: Move failed: $!");
 copy("$out_dir/$output.adf.unw.geo.tif","${prod_dir}/${long_output}_unw_phase.tif") or die ("ERROR $0: Move failed: $!");
+if ($los_flag) { copy("$out_dir/$output.los.disp.geo.org.tif","${prod_dir}/${long_output}_los_disp.tif") or die ("ERROR $0: Move failed: $!");}
 if ($inc_flag) { copy("$out_dir/$output.inc.tif","${prod_dir}/${long_output}_inc.tif") or die ("ERROR $0: Move failed: $!");}
 if ($look_flag) { 
     copy("$out_dir/$output.lv_theta.tif","${prod_dir}/${long_output}_lv_theta.tif") or die ("ERROR $0: Move failed: $!");
