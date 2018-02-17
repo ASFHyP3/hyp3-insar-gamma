@@ -133,6 +133,12 @@ rashgt ${ifgname}.vert.disp - $width 1 1 0 1 1 0.028
 #echo "rashgt ${ifgname}.vert.disp ${mname}.mli $width 1 1 0 1 1 0.01"
 #rashgt ${ifgname}.vert.disp ${mname}.mli $width 1 1 0 1 1 0.01
 
+echo "dispmap ${ifgname}.adf.unw DEM/HGT_SAR_${rlks}_${azlks} ${mname}.mli.par - ${ifgname}.los.disp 0"
+dispmap ${ifgname}.adf.unw DEM/HGT_SAR_${rlks}_${azlks} ${mname}.mli.par - ${ifgname}.los.disp 0
+
+echo "rashgt ${ifgname}.los.disp - $width 1 1 0 1 1 0.028"
+rashgt ${ifgname}.los.disp - $width 1 1 0 1 1 0.028
+
 
 echo "-------------------------------------------------"
 echo "             Unwrapping done"
@@ -201,6 +207,18 @@ geocode_back ${ifgname}.vert.disp $width $lt ${ifgname}.vert.disp.geo $demw $dem
 
 echo "data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.org.tif"
 data2geotiff $demfile ${ifgname}.vert.disp.geo 2 ${ifgname}.vert.disp.geo.org.tif
+
+echo "geocode_back ${ifgname}.los.disp.bmp $width $lt ${ifgname}.los.disp.bmp.geo $demw $demn 0 2"
+geocode_back ${ifgname}.los.disp.bmp $width $lt ${ifgname}.los.disp.bmp.geo $demw $demn 0 2
+
+echo "data2geotiff $demfile ${ifgname}.los.disp.bmp.geo 0 ${ifgname}.los.disp.geo.tif"
+data2geotiff $demfile ${ifgname}.los.disp.bmp.geo 0 ${ifgname}.los.disp.geo.tif
+
+echo "geocode_back ${ifgname}.los.disp $width $lt ${ifgname}.los.disp.geo $demw $demn 0 0"
+geocode_back ${ifgname}.los.disp $width $lt ${ifgname}.los.disp.geo $demw $demn 0 0
+
+echo "data2geotiff $demfile ${ifgname}.los.disp.geo 2 ${ifgname}.los.disp.geo.org.tif"
+data2geotiff $demfile ${ifgname}.los.disp.geo 2 ${ifgname}.los.disp.geo.org.tif
 
 echo "data2geotiff $demfile DEM/inc 2 ${ifgname}.inc.tif"
 data2geotiff $demfile DEM/inc_flat 2 ${ifgname}.inc.tif
