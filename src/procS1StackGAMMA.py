@@ -40,8 +40,10 @@ import math
 from get_dem import get_dem
 from getSubSwath import get_bounding_box_file
 from prepGamma import prepGamma
+from ifm_sentinel import gammaProcess
 from execute import execute
 from osgeo import gdal
+from utm2dem import utm2dem
 import zipfile
 import argparse
 import commands
@@ -55,114 +57,27 @@ from getDemFor import getDemFile
 #
 #####################
 
-def getDemFileGamma(filenames,use_opentopo,rlooks):
+def getDemFileGamma(filenames,use_opentopo,alooks):
 
-    getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
+    demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
 
     # If we downsized the SAR image, downsize the DEM file
-    # if rlks == 1, then the SAR image is roughly 20 m square -> use native dem res
-    # if rlks == 2, then the SAR image is roughly 40 m square -> set dem to 80 meters
-    # if rlks == 3, then the SAR image is roughly 60 m square -> set dem to 120 meters 
+    # if alks == 1, then the SAR image is roughly 20 m square -> use native dem res
+    # if alks == 2, then the SAR image is roughly 40 m square -> set dem to 80 meters
+    # if alks == 3, then the SAR image is roughly 60 m square -> set dem to 120 meters 
     # etc.
     #
     # The DEM is set to double the res because it will be 1/2'd by the procedure
     # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
 
-    pix_size = 20 * int(rlooks) * 2;
+    pix_size = 20 * int(alooks) * 2;
     gdal.Warp("tmpdem2.tif","tmpdem.tif",xRes=pix_size,yRes=pix_size,resampleAlg="average")
-    
+    os.remove("tmpdem.tif")    
     if use_opentopo == True:
-      cmd = "utm2dem_i2.pl tmpdem2.tif big.dem big.par"
+      utm2dem("tmpdem2.tif","big.dem","big.par",dataType="int16")
     else:
-      cmd = "utm2dem.pl tmpdem2.tif big.dem big.par"
-    execute(cmd)
-    return("big")
-
-def getBurstOverlaps(mydir):
-    t = re.split('_',mydir)
-    master = t[0]
-    slave = t[1]
-    os.chdir(mydir)
-    burst_tab1 = "%s_burst_tab" % master
-    f1 = open(burst_tab1,"w")
-    burst_tab2 = "%s_burst_tab" % slave
-    f2 = open(burst_tab2,"w")    
-    for name in ['001.xml','002.xml','003.xml']:
-        time1 = []
-        time2 = []
-        for myfile in os.listdir("."):
-            if ".SAFE" in myfile and master in myfile:
-                os.chdir(myfile)
-                os.chdir("annotation")
-                for myfile2 in os.listdir("."):
-                    if name in myfile2:
-                        root = etree.parse(myfile2)
-                        for coord in root.iter('azimuthAnxTime'):
-                            time1.append(float(coord.text))
-                        for count in root.iter('burstList'):
-                            total_bursts1=int(count.attrib['count'])
-                os.chdir("../..")
-            elif ".SAFE" in myfile and slave in myfile:
-                os.chdir(myfile)
-                os.chdir("annotation")
-                for myfile2 in os.listdir("."):
-                    if name in myfile2:
-                        root = etree.parse(myfile2)
-                        for coord in root.iter('azimuthAnxTime'):
-                            time2.append(float(coord.text))
-                        for count in root.iter('burstList'):
-                            total_bursts2=int(count.attrib['count'])
-                os.chdir("../..")
-
-        cnt = 1
-        found = 0
-        x = time1[0]
-        for y in time2:
-            if (abs(x-y) < 0.20):
-                print "Found burst match at 1 %s" % cnt
-                found = 1
-                start1 = 1
-                start2 = cnt
-            cnt += 1
-
-        if found == 0:
-            y = time2[0]
-            cnt = 1
-            for x in time1:
-                if (abs(x-y) < 0.20):
-                    print "Found burst match at %s 1" % cnt
-                    found = 1
-                    start1 = cnt
-                    start2 = 1
-                cnt += 1
-
-        size1 = total_bursts1 - start1 + 1
-        size2 = total_bursts2 - start2 + 1
-
-        if (size1 > size2):
-            size = size2
-        else:
-            size = size1
-        
-        f1.write("%s %s\n" % (start1, start1+size-1))
-        f2.write("%s %s\n" % (start2, start2+size-1))
-        
-    f1.close()
-    f2.close()
-    return(burst_tab1,burst_tab2)
-
-def gammaProcess(mydir,dem,alooks,rlooks,inc_flag,look_flag,los_flag):
-    cmd = 'cd %s; ' % mydir 
-    (burst_tab1,burst_tab2) = getBurstOverlaps(mydir)
-    cmd = cmd + 'ifm_sentinel.pl '
-    if inc_flag:
-        cmd = cmd + '-i '
-    if look_flag:
-        cmd = cmd + '-l '
-    if los_flag:
-        cmd = cmd + '-s '
-    cmd = cmd + '-d=%s IFM %s %s %s %s ' % (dem,alooks,rlooks,burst_tab1,burst_tab2)
-    execute(cmd)
+      utm2dem("tmpdem2.tif","big.dem","big.par")
+    return("big",demtype)
 
 def makeDirAndLinks(name1,name2,file1,file2,dem):
     dirname = '%s_%s' % (name1,name2)
@@ -175,44 +90,16 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     os.symlink("../%s.par" % dem,"%s.par" % dem)
     os.chdir('..')
 
-def makeParameterFile(mydir,alooks,rlooks):
-    res = 20 * int(rlooks)        
+def makeParameterFile(mydir,alooks,rlooks,dem_source):
+    res = 20 * int(alooks)        
     
-    if os.path.isdir("DEM"):
-        string = commands.getstatusoutput('gdalinfo %s' % glob.glob("DEM/*.tif")[0])
-        lst = string[1].split("\n")
-        for item in lst:
-            if "GEOGCS" in item:
-                if "WGS 84" in item:
-                    demtype = 'SRTMGL'
-                else:
-                    demtype = 'NED'
-        for item in lst:
-            if "Pixel Size" in item:
-                if demtype == 'SRTMGL':
-                    if "0.000277777777780" in item:
-                        number = '1'
-                    else:
-                        number = '3'
-                else:
-                    if "0.000092592592" in item:
-                        number = '13'
-                    elif "0.00027777777" in item:
-                        number = '1'
-                    else:
-                        number = '2'
-        demtype = demtype + number
-    else:
-        demtype = "Unknown"
-
     os.chdir("%s" % mydir)
     master_date = mydir[:15]
     slave_date = mydir[17:]
-    
+   
+    print "In directory {} looking for file with date {}".format(os.getcwd(),master_date) 
     master_file = glob.glob("*%s*.SAFE" % master_date)[0]
     slave_file = glob.glob("*%s*.SAFE" % slave_date)[0]
-    master_file = master_file.replace(".SAFE","")
-    slave_file = slave_file.replace(".SAFE","")
 
     f = open("IFM/baseline.log","r")
     for line in f:
@@ -221,14 +108,22 @@ def makeParameterFile(mydir,alooks,rlooks):
             s = re.split("\s+",t[1])
             baseline = float(s[1])
     f.close
-    
-    f = open("IFM.log","r")
-    for line in f:
-        if "SLC image first line UTC time stamp" in line:
-            t = re.split(":",line)
-            utctime = float(t[2])
-    f.close
-    
+
+    back = os.getcwd()
+    os.chdir(os.path.join(master_file,"annotation"))
+    for myfile in os.listdir("."):
+        if "001.xml" in myfile:
+            root = etree.parse(myfile)
+            for coord in root.iter('productFirstLineUtcTime'):
+                utc = coord.text
+                print "Found utc time {}".format(utc)
+    t = utc.split("T")
+    print t
+    s = t[1].split(":")
+    print s
+    utctime = ((int(s[0])*60+int(s[1]))*60)+float(s[2])
+    os.chdir(back) 
+ 
     name = "IFM/" + master_date[:8] + ".mli.par"
     f = open(name,"r")
     for line in f:
@@ -238,6 +133,9 @@ def makeParameterFile(mydir,alooks,rlooks):
             heading = float(s[1])
     f.close
     
+    master_file = master_file.replace(".SAFE","")
+    slave_file = slave_file.replace(".SAFE","")
+
     os.chdir("PRODUCT")
     name = "%s.txt" % mydir
     f = open(name,'w')
@@ -253,7 +151,7 @@ def makeParameterFile(mydir,alooks,rlooks):
     f.write('Resolution of output (m): %s\n' % res)
     f.write('Range bandpass filter: no\n')
     f.write('Azimuth bandpass filter: no\n')
-    f.write('DEM source: %s\n' % demtype)
+    f.write('DEM source: %s\n' % dem_source)
     f.write('DEM resolution (m): %s\n' % (res*2))
     f.write('Unwrapping type: mcf\n')
     f.write('Unwrapping threshold: none\n')
@@ -272,7 +170,7 @@ def makeParameterFile(mydir,alooks,rlooks):
 #	use_opentopo = flag for using opentopo instead of get_dem
 #
 ###########################################################################
-def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None,inc_flag=None,look_flag=None,los_flag=None):
+def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,inc_flag=None,look_flag=None,los_flag=None):
 
     # If file list is given, download the files
     if csvFile is not None:
@@ -285,7 +183,9 @@ def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None,
 
     # If no DEM is given, determine one from first file
     if dem is None:
-        dem = getDemFileGamma(filenames,use_opentopo,rlooks)
+        dem, dem_source = getDemFileGamma(filenames,use_opentopo,alooks)
+    else: 
+        dem_source = "UNKNOWN"
 
     length=len(filenames)
 
@@ -303,8 +203,18 @@ def procS1StackGAMMA(alooks=20,rlooks=4,csvFile=None,dem=None,use_opentopo=None,
         for mydir in os.listdir("."):
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
                 print "Processing directory %s" % mydir
-                gammaProcess(mydir,dem,alooks,rlooks,inc_flag,look_flag,los_flag)
-                makeParameterFile(mydir,alooks,rlooks)
+                os.chdir(mydir)
+                master = mydir.split("_")[0]
+                slave = mydir.split("_")[1]
+                for myfile in glob.glob("*.SAFE"):
+                    if master in myfile: 
+                        masterFile = myfile
+                    if slave in myfile:
+                        slaveFile = myfile
+                gammaProcess(masterFile,slaveFile,"IFM",dem=dem,rlooks=rlooks,alooks=alooks,
+                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag)
+                os.chdir("..") 
+                makeParameterFile(mydir,alooks,rlooks,dem_source)
 
     # Clip results to same bounding box
     if (length > 2):
@@ -323,8 +233,8 @@ if __name__ == '__main__':
   parser.add_argument("-l",action="store_true",help="Create look vector theta and phi files")
   parser.add_argument("-s",action="store_true",help="Create line of sight displacement file")
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
-  parser.add_argument("-r","--rlooks",default=4,help="Number of range looks (def=4)")
-  parser.add_argument("-a","--alooks",default=20,help="Number of azimuth looks (def=20)")
+  parser.add_argument("-r","--rlooks",default=20,help="Number of range looks (def=20)")
+  parser.add_argument("-a","--alooks",default=4,help="Number of azimuth looks (def=4)")
   args = parser.parse_args()
 
   procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i,look_flag=args.l,los_flag=args.s)
