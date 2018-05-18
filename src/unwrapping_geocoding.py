@@ -54,14 +54,15 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     cmd = "rascc {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 .1 .9 - - - {IFG}.adf.cc.ras".format(IFG=ifgname,MMLI=mmli,W=width)
     execute(cmd)
     
-    cmd = "rascc_mask {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 0.05 ".format(IFG=ifgname,MMLI=mmli,W=width)
+    cmd = "rascc_mask {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 0.10 0.20 ".format(IFG=ifgname,MMLI=mmli,W=width)
     execute(cmd)
     
-#    cmd = "mcf {IFGF}.adf {IFG}.adf.cc {IFG}.adf.cc_mask.bmp {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
+    cmd = "mcf {IFGF}.adf {IFG}.adf.cc {IFG}.adf.cc_mask.bmp {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
+        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
+
+#    cmd = "mcf {IFGF}.adf {IFG}.adf.cc - {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
 #        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
 
-    cmd = "mcf {IFGF}.adf {IFG}.adf.cc - {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
-        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
     execute(cmd)
     
     cmd="rasrmg {IFG}.adf.unw {MMLI} {W} 1 1 0 1 1 0.33333 1.0 .35 0.0 - {IFG}.adf.unw.ras".format(IFG=ifgname,MMLI=mmli,W=width)
