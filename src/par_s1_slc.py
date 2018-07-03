@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging
 import argparse
 from argparse import RawTextHelpFormatter
 from execute import execute
@@ -37,31 +38,31 @@ def par_s1_slc(pol=None):
     for myfile in os.listdir("."):
         if ".zip" in myfile:
             if not os.path.exists(myfile.replace(".zip",".SAFE")):
-                print "Unzipping file {}".format(myfile)
+                logging.info("Unzipping file {}".format(myfile))
                 zip_ref = zipfile.ZipFile(myfile, 'r')
                 zip_ref.extractall(".")
                 zip_ref.close()    
 
     for myfile in os.listdir("."):
       if ".SAFE" in myfile:
-        print "Procesing directory {}".format(myfile)
+        logging.info("Procesing directory {}".format(myfile))
         mytype = myfile[13:16]
-        print "Found image type {}".format(mytype)
+        logging.info("Found image type {}".format(mytype))
 
         if "SSH" in mytype or "SSV" in mytype:
-             print "Found single pol file"
+             logging.info("Found single pol file")
              single_pol = 1
         elif "SDV" in mytype:
-             print "Found multi-pol file"
+             logging.info("Found multi-pol file")
              single_pol = 0
              if "hv" in pol or "hh" in pol:
-                 print "ERROR: no {} polarization exists in a {} file".format(pol,mytype)
+                 logging.error("ERROR: no {} polarization exists in a {} file".format(pol,mytype))
                  exit(1)
         elif "SDH" in mytype:
-             print "Found multi-pol file"
+             logging.info("Found multi-pol file")
              single_pol = 0
              if "vh" in pol or "vv" in pol:
-                 print "ERROR: no {} polarization exists in a {} file".format(pol,mytype)
+                 logging.error("ERROR: no {} polarization exists in a {} file".format(pol,mytype))
                  exit(1)
 
         folder = myfile.replace(".SAFE","")
@@ -71,9 +72,9 @@ def par_s1_slc(pol=None):
         if not os.path.exists(path):
             os.mkdir(path)
 
-        print "Folder is {}".format(folder)
-        print "Long date is {}".format(datelong)
-        print "Acquisition date is {}".format(acqdate)
+        logging.info("Folder is {}".format(folder))
+        logging.info("Long date is {}".format(datelong))
+        logging.info("Acquisition date is {}".format(acqdate))
 
         os.chdir("{}.SAFE".format(folder))
 
@@ -94,9 +95,9 @@ def par_s1_slc(pol=None):
 
         os.chdir(path)
 
-        print "Getting precision orbit for file {}".format(myfile)
+        logging.info("Getting precision orbit for file {}".format(myfile))
         (orburl,tmp) = getOrbFile(myfile)
-        print orburl
+        logging.info("{}".format(orburl))
         cmd = 'wget ' + orburl
         execute(cmd)
 
@@ -130,5 +131,12 @@ if __name__ == '__main__':
       formatter_class=RawTextHelpFormatter)
     parser.add_argument('pol',nargs='?',default='vv',help='name of polarization to process (default vv)')
     args = parser.parse_args()
+    
+    logFile = "par_s1_slc_log.txt"
+    logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.StreamHandler())
+    logging.info("Starting run")
+
     par_s1_slc(args.pol)    
 

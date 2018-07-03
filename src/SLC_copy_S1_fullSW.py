@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
+import logging
 import argparse
 from argparse import RawTextHelpFormatter
 from execute import execute
@@ -12,13 +13,13 @@ import shutil
 
 def SLC_copy_S1_fullSW(path,slcname,tabin,burst_tab,mode=2,dem=None,dempath=None,raml=10,azml=2):
     
-    print "Using range looks {}".format(raml)
-    print "Using azimuth looks {}".format(azml)
-    print "Operating in mode {}".format(mode)
-    print "In directory {}".format(os.getcwd())
+    logging.info("Using range looks {}".format(raml))
+    logging.info("Using azimuth looks {}".format(azml))
+    logging.info("Operating in mode {}".format(mode))
+    logging.info("In directory {}".format(os.getcwd()))
 
     if not os.path.isfile(tabin):
-        print "Can't find tab file {} in {}".format(tabin,os.getcwd())
+        logging.error("ERROR: Can't find tab file {} in {}".format(tabin,os.getcwd()))
     f = open(tabin,"r")    
     g = open("TAB_swFULL","w")
     for line in f:
@@ -51,8 +52,8 @@ def SLC_copy_S1_fullSW(path,slcname,tabin,burst_tab,mode=2,dem=None,dempath=None
     mode = int(mode)
     if mode == 1:
     
-        print "currently in {}".format(os.getcwd())
-        print "creating directory DEM"
+        logging.info("currently in {}".format(os.getcwd()))
+        logging.info("creating directory DEM")
     
         if not os.path.exists("DEM"):
             os.mkdir("DEM")
@@ -96,10 +97,19 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     if not os.path.exists(args.slcTab):
-        print "ERROR:  Can't find slc tab file {}".format(args.slcTab)
+        logging.error("ERROR:  Can't find slc tab file {}".format(args.slcTab))
 
     if not os.path.exists(args.burstTab):
-        print "ERROR:  Can't find burst tab file {}".format(args.burstTab)
+        logging.error("ERROR:  Can't find burst tab file {}".format(args.burstTab))
+
+    logFile = "SLC_copy_S1_fullSW_log.txt"
+    logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+    logging.getLogger().addHandler(logging.StreamHandler())
+    logging.info("Starting run")
+
+
+
 
     SLC_copy_S1_fullSW(args.outDir,args.slcID,args.slcTab,args.burstTab,args.mode,args.dem,args.path,args.rl,args.al)
 

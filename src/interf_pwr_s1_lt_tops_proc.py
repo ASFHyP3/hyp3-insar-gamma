@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import argparse
+import logging
 import os
 import shutil
 from execute import execute
@@ -101,11 +102,11 @@ def interf_pwr_s1_lt_tops_proc(master,slave,dem,rlooks=10,alooks=2,iter=5,step=0
 
     if step == 0:
         if not os.path.isfile(dem):
-            print "Currently in directory {}".format(os.getcwd())
-            print "ERROR: Input DEM file {} can't be found!".format(dem)
+            logging.info("Currently in directory {}".format(os.getcwd()))
+            logging.error("ERROR: Input DEM file {} can't be found!".format(dem))
             exit(1)
-        print "Input DEM file {} found".format(dem)
-        print "Preparing initial look up table and sim_unw file"
+        logging.info("Input DEM file {} found".format(dem))
+        logging.info("Preparing initial look up table and sim_unw file")
         cmd = "create_offset {MPAR} {SPAR} {OFF} 1 {RL} {AL} 0".format(MPAR=mpar,SPAR=spar,OFF=off,RL=rlooks,AL=alooks)
         execute(cmd)
         cmd = "rdc_trans {MMLI} {DEM} {SMLI} {LT}".format(MMLI=mmli,DEM=dem,SMLI=smli,M=master,LT=lt)
@@ -113,17 +114,17 @@ def interf_pwr_s1_lt_tops_proc(master,slave,dem,rlooks=10,alooks=2,iter=5,step=0
         cmd = "phase_sim_orb {MPAR} {SPAR} {OFF} {DEM} {IFG}.sim_unw {MPAR} -".format(MPAR=mpar,SPAR=spar,OFF=off,DEM=dem,IFG=ifgname,M=master)
         execute(cmd)
     elif step == 1:
-        print "Starting initial coregistration with look up table"
+        logging.info("Starting initial coregistration with look up table")
         coregister_data(0,SLC2tab,SLC2Rtab,spar,mpar,mmli,smli,ifgname,master,slave,lt,rlooks,alooks,iter)
     elif step == 2:
-        print "Starting iterative coregistration with look up table"
+        logging.info("Starting iterative coregistration with look up table")
         for n in range (1,iter+1):
             coregister_data(n,SLC2tab,SLC2Rtab,spar,mpar,mmli,smli,ifgname,master,slave,lt,rlooks,alooks,iter)
     elif step == 3:
-        print "Starting single interation coregistration with look up table"
+        logging.info("Starting single interation coregistration with look up table")
         coregister_data(iter+1,SLC2tab,SLC2Rtab,spar,mpar,mmli,smli,ifgname,master,slave,lt,rlooks,alooks,iter)
     else:
-        print "ERROR: Unrecognized step {}; must be from 0 - 2".format(step)
+        logging.error("ERROR: Unrecognized step {}; must be from 0 - 2".format(step))
         exit(1)     
 
 if __name__ == '__main__':
@@ -137,8 +138,13 @@ if __name__ == '__main__':
   parser.add_argument("-a","--alooks",default=2,help="Number of azimuth looks (def=2)",type=int)
   parser.add_argument("-i","--iter",help='Number of coregistration iterations (def=5)',default=5,type=int)
   parser.add_argument("-s","--step",type=int,help='Procesing step: 0) Prepare LUT and SIM_UNW; 1) Initial co-registration with DEM; 2) iteration coregistration',default=0)
-
   args = parser.parse_args()
+
+  logFile = "interf_pwr_s1_tops_proc_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
 
   interf_pwr_s1_lt_tops_proc(args.master,args.slave,args.dem,rlooks=args.rlooks,alooks=args.alooks,iter=args.iter,step=args.step)
     

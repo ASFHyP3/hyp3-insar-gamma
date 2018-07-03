@@ -1,4 +1,6 @@
 #!/usr/bin/python
+
+import logging
 import argparse
 import os
 from getParameter import getParameter
@@ -24,13 +26,13 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     smli = slave + ".mli"
     
     if not os.path.isfile(dempar):
-        print "ERROR: Unable to find dem par file {}".format(dempar)
+        logging.error("ERROR: Unable to find dem par file {}".format(dempar))
     
     if not os.path.isfile(lt):
-        print "ERROR: Unable to find look up table file {}".format(lt)
+        logging.error("ERROR: Unable to find look up table file {}".format(lt))
     
     if not os.path.isfile(offit):
-        print "ERROR: Unable to find offset file {}".format(offit)
+        logging.error("ERROR: Unable to find offset file {}".format(offit))
     
     width = getParameter(offit,"interferogram_width")
     nline = getParameter(offit,"interferogram_azimuth_lines")
@@ -39,11 +41,11 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     
     ifgf = "{}.diff0.{}".format(ifgname,step)
     
-    print "{} will be used for unwrapping and geocoding".format(ifgf)
+    logging.info("{} will be used for unwrapping and geocoding".format(ifgf))
     
-    print "-------------------------------------------------"
-    print "            Start unwrapping"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            Start unwrapping")
+    logging.info("-------------------------------------------------")
 
     cmd = "adf {IFGF} {IFGF}.adf {IFG}.adf.cc {W} {A} - 5".format(IFGF=ifgf,IFG=ifgname,W=width,A=alpha)
     execute(cmd)
@@ -80,13 +82,13 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     cmd = "rashgt {IFG}.los.disp - {W} 1 1 0 1 1 0.028".format(IFG=ifgname,W=width)
     execute(cmd)
   
-    print "-------------------------------------------------"
-    print "            End unwrapping"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            End unwrapping")
+    logging.info("-------------------------------------------------")
     
-    print "-------------------------------------------------"
-    print "            Start geocoding"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            Start geocoding")
+    logging.info("-------------------------------------------------")
     
     geocode_back(mmli,mmli+".geo",width,lt,demw,demn,0)
     geocode_back(smli,smli+".geo",width,lt,demw,demn,0)
@@ -119,9 +121,9 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     data2geotiff("lv_theta","{}.lv_theta.tif".format(ifgname),dempar,2)
     data2geotiff("lv_phi","{}.lv_phi.tif".format(ifgname),dempar,2)
     
-    print "-------------------------------------------------"
-    print "            End geocoding"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            End geocoding")
+    logging.info("-------------------------------------------------")
     
 
 if __name__ == '__main__':
@@ -138,6 +140,12 @@ if __name__ == '__main__':
   parser.add_argument("--npatr",default=1,help="Number of patches in range (def=1)")
   parser.add_argument("--npata",default=1,help="Number of patches in azimuth (def=1)")
   args = parser.parse_args()
+
+  logFile = "unwrapping_geocoding_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
 
   unwrapping_geocoding(args.master, args.slave, step=args.step, rlooks=args.rlooks, alooks=args.alooks,
       trimode=args.tri,npatr=args.npatr,npata=args.npata,alpha=args.alpha)
