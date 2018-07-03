@@ -118,7 +118,7 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
                 utc = coord.text
                 logging.info("Found utc time {}".format(utc))
     t = utc.split("T")
-    logging.info("{}".formar(t))
+    logging.info("{}".format(t))
     s = t[1].split(":")
     logging.info("{}".format(s))
     utctime = ((int(s[0])*60+int(s[1]))*60)+float(s[2])
