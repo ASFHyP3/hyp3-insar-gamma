@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 ###############################################################################
-# procS1StackGAMMA_recipe.py 
+# procS1StackGAMMA.py 
 #
 # Project:   
 # Purpose:  Wrapper script for processing a stack of Sentinel-1 with Gamma
@@ -32,6 +32,7 @@
 # Import all needed modules right away
 #
 #####################
+import logging
 import sys
 import os
 from lxml import etree
@@ -93,11 +94,10 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
 def makeParameterFile(mydir,alooks,rlooks,dem_source):
     res = 20 * int(alooks)        
     
-    os.chdir("%s" % mydir)
     master_date = mydir[:15]
     slave_date = mydir[17:]
    
-    print "In directory {} looking for file with date {}".format(os.getcwd(),master_date) 
+    logging.info("In directory {} looking for file with date {}".format(os.getcwd(),master_date)) 
     master_file = glob.glob("*%s*.SAFE" % master_date)[0]
     slave_file = glob.glob("*%s*.SAFE" % slave_date)[0]
 
@@ -116,11 +116,11 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
             root = etree.parse(myfile)
             for coord in root.iter('productFirstLineUtcTime'):
                 utc = coord.text
-                print "Found utc time {}".format(utc)
+                logging.info("Found utc time {}".format(utc))
     t = utc.split("T")
-    print t
+    logging.info("{}".formar(t))
     s = t[1].split(":")
-    print s
+    logging.info("{}".format(s))
     utctime = ((int(s[0])*60+int(s[1]))*60)+float(s[2])
     os.chdir(back) 
  
@@ -157,7 +157,7 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
     f.write('Unwrapping threshold: none\n')
     f.write('Speckle filtering: off\n')
     f.close()
-    os.chdir("../..")  
+    os.chdir("..")  
     
 
 ###########################################################################
@@ -170,7 +170,8 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
 #	use_opentopo = flag for using opentopo instead of get_dem
 #
 ###########################################################################
-def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,inc_flag=None,look_flag=None,los_flag=None):
+def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
+                     inc_flag=None,look_flag=None,los_flag=None,proc_all=None):
 
     # If file list is given, download the files
     if csvFile is not None:
@@ -178,8 +179,8 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
   
     (filenames,filedates) = file_subroutines.get_file_list()
     
-    print filenames
-    print filedates
+    logging.info("{}".format(filenames))
+    logging.info("{}".format(filedates))
 
     # If no DEM is given, determine one from first file
     if dem is None:
@@ -189,20 +190,29 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
 
     length=len(filenames)
 
-    # Make directory and link files for pairs and 2nd pairs
-    for x in xrange(length-2):
-        makeDirAndLinks(filedates[x],filedates[x+1],filenames[x],filenames[x+1],dem)
-        makeDirAndLinks(filedates[x],filedates[x+2],filenames[x],filenames[x+2],dem)
-
+    if not proc_all:
+         # Make directory and link files for pairs and 2nd pairs
+         for x in xrange(length-2):
+             makeDirAndLinks(filedates[x],filedates[x+1],filenames[x],filenames[x+1],dem)
+             makeDirAndLinks(filedates[x],filedates[x+2],filenames[x],filenames[x+2],dem)
+    else:
+         # Make directory and link files for ALL possible pairs
+         for i in xrange(length):
+             for j in xrange(i+1,length):
+                 makeDirAndLinks(filedates[i],filedates[j],filenames[i],filenames[j],dem)
+            
     # If we have anything to process
     if (length > 1) :
-        # Make directory and link files for last pair
-        makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
+        if not proc_all:
+            # Make directory and link files for last pair
+            makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
 
         # Run through directories processing ifgs as we go
+        os.mkdir("PRODUCTS")
+        first = 1
         for mydir in os.listdir("."):
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
-                print "Processing directory %s" % mydir
+                logging.info("Processing directory %s" % mydir)
                 os.chdir(mydir)
                 master = mydir.split("_")[0]
                 slave = mydir.split("_")[1]
@@ -213,12 +223,18 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                         slaveFile = myfile
                 gammaProcess(masterFile,slaveFile,"IFM",dem=dem,rlooks=rlooks,alooks=alooks,
                   inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag)
-                os.chdir("..") 
                 makeParameterFile(mydir,alooks,rlooks,dem_source)
+                os.chdir("..")
+                shutil.move("{}/IFM/DEM/demseg.par".format(mydir),
+                            "PRODUCTS/{}_demseg.par".format(mydir))
+                for myfile in glob.glob("{}/PRODUCT/*".format(mydir)):
+                    shutil.move(myfile,"PRODUCTS/{}".format(os.path.basename(myfile)))
+                if not first:
+                    shutil.rmtree(mydir)
 
     # Clip results to same bounding box
-    if (length > 2):
-        prepGamma()
+    # if (length > 2):
+    #    prepGamma()
 
 
 ###########################################################################
@@ -235,7 +251,14 @@ if __name__ == '__main__':
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-r","--rlooks",default=20,help="Number of range looks (def=20)")
   parser.add_argument("-a","--alooks",default=4,help="Number of azimuth looks (def=4)")
+  parser.add_argument("-p",action="store_true",help="Process ALL possible pairs")
   args = parser.parse_args()
 
-  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i,look_flag=args.l,los_flag=args.s)
+  logFile = "procS1StackGAMMA_{}_log.txt".format(os.getpid())
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
+
+  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i,look_flag=args.l,los_flag=args.s,proc_all=args.p)
 

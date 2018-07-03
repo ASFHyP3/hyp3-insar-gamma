@@ -33,6 +33,7 @@
 #
 #####################
 
+import logging
 import argparse
 import os, re
 import datetime
@@ -80,7 +81,7 @@ def getDemFileGamma(filename,use_opentopo,alooks):
     return("big",type)
 
 def getBurstOverlaps(masterDir,slaveDir):
-    print "Calculating burst overlaps; in directory {}".format(os.getcwd())
+    logging.info("Calculating burst overlaps; in directory {}".format(os.getcwd()))
     burst_tab1 = "%s_burst_tab" % masterDir[17:25]
     back = os.getcwd()
     f1 = open(burst_tab1,"w")
@@ -112,7 +113,7 @@ def getBurstOverlaps(masterDir,slaveDir):
         x = time1[0]
         for y in time2:
             if (abs(x-y) < 0.20):
-                print "Found burst match at 1 %s" % cnt
+                logging.info("Found burst match at 1 %s" % cnt)
                 found = 1
                 start1 = 1
                 start2 = cnt
@@ -123,7 +124,7 @@ def getBurstOverlaps(masterDir,slaveDir):
             cnt = 1
             for x in time1:
                 if (abs(x-y) < 0.20):
-                    print "Found burst match at %s 1" % cnt
+                    logging.info("Found burst match at %s 1" % cnt)
                     found = 1
                     start1 = cnt
                     start2 = 1
@@ -233,8 +234,8 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
 
     global proc_log
 
-    print "\n\nSentinel1A differential interferogram creation program\n"
-    print "Creating output interferogram in directory {}\n\n".format(outdir)
+    logging.info("\n\nSentinel1A differential interferogram creation program\n")
+    logging.info("Creating output interferogram in directory {}\n\n".format(outdir))
 
     #
     #  Set some variables and open log files
@@ -251,10 +252,10 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     process_log("starting processing")
 
     if not "IW_SLC__" in masterFile:
-        print "ERROR: Master file {} is not of type IW_SLC!".format(masterFile)
+        logging.error("ERROR: Master file {} is not of type IW_SLC!".format(masterFile))
         exit(1)
     if not "IW_SLC__" in slaveFile:
-        print "ERROR: Slave file {} is not of type IW_SLC!".format(slaveFile)
+        logging.error("ERROR: Slave file {} is not of type IW_SLC!".format(slaveFile))
         exit(1)
   
     type, pol = getFileType(masterFile)
@@ -265,10 +266,10 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
         elif type == "SDH":
             pol = "hv"
         else:
-            print "Flag type mismatch -- processing {}".format(pol)
-        print "Setting pol to {}".format(pol)
+            logging.info("Flag type mismatch -- processing {}".format(pol))
+        logging.info("Setting pol to {}".format(pol))
 
-    print "Processing the {} polarization".format(pol)
+    logging.info("Processing the {} polarization".format(pol))
 
     #
     #  Ingest the data files into gamma format
@@ -292,7 +293,7 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     # Figure out which bursts overlap between the two swaths 
     #
     (burst_tab1,burst_tab2) = getBurstOverlaps(masterFile,slaveFile)
-    print "Finished calculating overlap - in directory {}".format(os.getcwd())
+    logging.info("Finished calculating overlap - in directory {}".format(os.getcwd()))
     shutil.move(burst_tab1,masterDateShort)
     shutil.move(burst_tab2,slaveDateShort)
 
@@ -331,9 +332,10 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
         if "final azimuth offset poly. coeff.:" in line:
             offset = line.split(":")[1]
     if float(offset) > 0.02:
-        print "ERROR: Found azimuth offset of {}!".format(offset)
+        logging.error("ERROR: Found azimuth offset of {}!".format(offset))
+        exit(1)
     else:
-        print "Found azimuth offset of {}!".format(offset)
+        logging.info("Found azimuth offset of {}!".format(offset))
 
     output = masterDateShort + "_" + slaveDateShort
 
@@ -378,7 +380,7 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     move_output_files(outdir,output,master,prod_dir,igramName,los_flag,inc_flag,look_flag)
 
     process_log("Done!!!")
-    print "Done!!!"
+    logging.info("Done!!!")
 
 
 if __name__ == '__main__':
@@ -398,6 +400,12 @@ if __name__ == '__main__':
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-c",action="store_true",help="cross pol processing - either hv or vh (default hh or vv)")
   args = parser.parse_args()
+
+  logFile = "ifm_sentinel_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
 
   gammaProcess(args.master,args.slave,args.output,dem=args.dem,rlooks=args.rlooks,alooks=args.alooks,
     inc_flag=args.i,look_flag=args.l,los_flag=args.s,ot_flag=args.o,cp_flag=args.c)
