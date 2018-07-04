@@ -80,6 +80,62 @@ def getDemFileGamma(filename,use_opentopo,alooks):
       utm2dem("tmpdem2.tif","big.dem","big.par")
     return("big",type)
 
+def getBursts(mydir,name):
+    back = os.getcwd()
+    os.chdir(os.path.join(mydir,"annotation"))
+    time = []
+    for myfile in os.listdir("."):
+        if name in myfile:
+            root = etree.parse(myfile)
+            for coord in root.iter('azimuthAnxTime'):
+                time.append(float(coord.text))
+            for count in root.iter('burstList'):
+                total_bursts=int(count.attrib['count'])
+    os.chdir(back) 
+    return time,total_bursts
+
+def getSelectBursts(masterDir,slaveDir,time):
+    logging.info("Finding selected bursts at time {} for length {}".format(time[0],time[1]))
+    burst_tab1 = "%s_burst_tab" % masterDir[17:25]
+    back = os.getcwd()
+    f1 = open(burst_tab1,"w")
+    burst_tab2 = "%s_burst_tab" % slaveDir[17:25]
+    f2 = open(burst_tab2,"w")    
+    size = float(time[3])
+    xml_cnt = 0
+    for name in ['001.xml','002.xml','003.xml']:
+        time1,total_bursts1 = getBursts(masterDir,name)
+        time2,total_bursts2 = getBursts(slaveDir,name)
+        cnt = 1
+        found1 = 0
+        for x in time1:
+            if (abs(float(x)-float(time[xml_cnt])) < 0.20):
+                logging.info("Found selected burst at {}".format(cnt))
+                found1 = 1
+                start1 = cnt
+            cnt = cnt + 1
+        cnt = 1
+        found2 = 0
+        for x in time2:
+            if (abs(float(x)-float(time[xml_cnt])) < 0.20):
+                logging.info("Found selected burst at {}".format(cnt))
+                found2 = 1
+                start2 = cnt
+            cnt = cnt + 1
+      
+        if not found1 or not found2:
+            logging.error("ERROR: Unable to find bursts at selected time")
+            exit(1)
+
+        f1.write("%s %s\n" % (start1, start1+size-1))
+        f2.write("%s %s\n" % (start2, start2+size-1))
+        
+	xml_cnt += 1
+	
+    f1.close()
+    f2.close()
+    return(burst_tab1,burst_tab2)
+
 def getBurstOverlaps(masterDir,slaveDir):
     logging.info("Calculating burst overlaps; in directory {}".format(os.getcwd()))
     burst_tab1 = "%s_burst_tab" % masterDir[17:25]
@@ -88,26 +144,8 @@ def getBurstOverlaps(masterDir,slaveDir):
     burst_tab2 = "%s_burst_tab" % slaveDir[17:25]
     f2 = open(burst_tab2,"w")    
     for name in ['001.xml','002.xml','003.xml']:
-        time1 = []
-        time2 = []
-        os.chdir(os.path.join(masterDir,"annotation"))
-        for myfile2 in os.listdir("."):
-            if name in myfile2:
-                root = etree.parse(myfile2)
-                for coord in root.iter('azimuthAnxTime'):
-                    time1.append(float(coord.text))
-                for count in root.iter('burstList'):
-                    total_bursts1=int(count.attrib['count'])
-        os.chdir(back) 
-        os.chdir(os.path.join(slaveDir,"annotation"))
-        for myfile2 in os.listdir("."):
-            if name in myfile2:
-                root = etree.parse(myfile2)
-                for coord in root.iter('azimuthAnxTime'):
-                    time2.append(float(coord.text))
-                for count in root.iter('burstList'):
-                    total_bursts2=int(count.attrib['count'])
-        os.chdir(back) 
+        time1,total_bursts1 = getBursts(masterDir,name)
+        time2,total_bursts2 = getBursts(slaveDir,name)
         cnt = 1
         found = 0
         x = time1[0]
@@ -227,10 +265,8 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
                   "{}_unw_phase".format(os.path.join(prod_dir,long_output)))
 
 
-
-    
 def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_flag=False,
-    look_flag=False,los_flag=False,ot_flag=False,cp_flag=False):
+    look_flag=False,los_flag=False,ot_flag=False,cp_flag=False,time=None):
 
     global proc_log
 
@@ -292,7 +328,11 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     #
     # Figure out which bursts overlap between the two swaths 
     #
-    (burst_tab1,burst_tab2) = getBurstOverlaps(masterFile,slaveFile)
+    if time is None:
+        (burst_tab1,burst_tab2) = getBurstOverlaps(masterFile,slaveFile)
+    else:
+        (burst_tab1,burst_tab2) = getSelectBursts(masterFile,slaveFile,time)
+        
     logging.info("Finished calculating overlap - in directory {}".format(os.getcwd()))
     shutil.move(burst_tab1,masterDateShort)
     shutil.move(burst_tab2,slaveDateShort)
@@ -399,6 +439,8 @@ if __name__ == '__main__':
   parser.add_argument("-s",action="store_true",help="Create line of sight displacement file")
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-c",action="store_true",help="cross pol processing - either hv or vh (default hh or vv)")
+  parser.add_argument("-t",nargs=4,type=float,help="Start processing at time for length bursts",
+                      metavar=('t1','t2','t3','length'))
   args = parser.parse_args()
 
   logFile = "ifm_sentinel_log.txt"
@@ -408,6 +450,6 @@ if __name__ == '__main__':
   logging.info("Starting run")
 
   gammaProcess(args.master,args.slave,args.output,dem=args.dem,rlooks=args.rlooks,alooks=args.alooks,
-    inc_flag=args.i,look_flag=args.l,los_flag=args.s,ot_flag=args.o,cp_flag=args.c)
+    inc_flag=args.i,look_flag=args.l,los_flag=args.s,ot_flag=args.o,cp_flag=args.c,time=args.t)
 
 

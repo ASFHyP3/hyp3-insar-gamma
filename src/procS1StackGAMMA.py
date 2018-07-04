@@ -51,6 +51,7 @@ import commands
 import glob
 import file_subroutines
 from getDemFor import getDemFile
+import shutil
 
 #####################
 #
@@ -85,10 +86,14 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
     os.chdir(dirname)
-    os.symlink("../%s" % file1,"%s" % file1)
-    os.symlink("../%s" % file2,"%s" % file2)
-    os.symlink("../%s.dem" % dem,"%s.dem" % dem)
-    os.symlink("../%s.par" % dem,"%s.par" % dem)
+    if not os.path.exists(file1):
+        os.symlink("../%s" % file1,"%s" % file1)
+    if not os.path.exists(file2):
+        os.symlink("../%s" % file2,"%s" % file2)
+    if not os.path.exists("%s.dem" % dem):
+        os.symlink("../%s.dem" % dem,"%s.dem" % dem)
+    if not os.path.exists("%s.par" % dem):
+        os.symlink("../%s.par" % dem,"%s.par" % dem)
     os.chdir('..')
 
 def makeParameterFile(mydir,alooks,rlooks,dem_source):
@@ -171,7 +176,8 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
 #
 ###########################################################################
 def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
-                     inc_flag=None,look_flag=None,los_flag=None,proc_all=None):
+                     inc_flag=None,look_flag=None,los_flag=None,proc_all=None,
+                     time=None):
 
     # If file list is given, download the files
     if csvFile is not None:
@@ -208,7 +214,8 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
             makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
 
         # Run through directories processing ifgs as we go
-        os.mkdir("PRODUCTS")
+        if not os.path.exists("PRODUCTS"):
+            os.mkdir("PRODUCTS")
         first = 1
         for mydir in os.listdir("."):
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
@@ -222,7 +229,7 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                     if slave in myfile:
                         slaveFile = myfile
                 gammaProcess(masterFile,slaveFile,"IFM",dem=dem,rlooks=rlooks,alooks=alooks,
-                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag)
+                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag,time=time)
                 makeParameterFile(mydir,alooks,rlooks,dem_source)
                 os.chdir("..")
                 shutil.move("{}/IFM/DEM/demseg.par".format(mydir),
@@ -231,6 +238,7 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                     shutil.move(myfile,"PRODUCTS/{}".format(os.path.basename(myfile)))
                 if not first:
                     shutil.rmtree(mydir)
+                first = 0
 
     # Clip results to same bounding box
     # if (length > 2):
@@ -252,6 +260,7 @@ if __name__ == '__main__':
   parser.add_argument("-r","--rlooks",default=20,help="Number of range looks (def=20)")
   parser.add_argument("-a","--alooks",default=4,help="Number of azimuth looks (def=4)")
   parser.add_argument("-p",action="store_true",help="Process ALL possible pairs")
+  parser.add_argument("-t",nargs=4,metavar=("t1","t2","t3","length"),help="Start times and number of selected bursts to process")
   args = parser.parse_args()
 
   logFile = "procS1StackGAMMA_{}_log.txt".format(os.getpid())
@@ -260,5 +269,6 @@ if __name__ == '__main__':
   logging.getLogger().addHandler(logging.StreamHandler())
   logging.info("Starting run")
 
-  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i,look_flag=args.l,los_flag=args.s,proc_all=args.p)
+  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,
+                   inc_flag=args.i,look_flag=args.l,los_flag=args.s,proc_all=args.p,time=args.t)
 
