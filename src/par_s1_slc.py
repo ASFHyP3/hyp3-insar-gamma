@@ -80,18 +80,18 @@ def par_s1_slc(pol=None):
 
         if (single_pol == 1):
             cmd = make_cmd(1,acqdate,path)
-            execute(cmd)
+            execute(cmd,uselogging=True)
             cmd = make_cmd(2,acqdate,path)
-            execute(cmd)
+            execute(cmd,uselogging=True)
             cmd = make_cmd(3,acqdate,path)
-            execute(cmd)
+            execute(cmd,uselogging=True)
         else:
             cmd = make_cmd(1,acqdate,path,pol=pol)
-            execute(cmd)
+            execute(cmd,uselogging=True)
             cmd = make_cmd(2,acqdate,path,pol=pol)
-            execute(cmd)
+            execute(cmd,uselogging=True)
             cmd = make_cmd(3,acqdate,path,pol=pol)
-            execute(cmd)
+            execute(cmd,uselogging=True)
 
         os.chdir(path)
 
@@ -99,7 +99,7 @@ def par_s1_slc(pol=None):
         (orburl,tmp) = getOrbFile(myfile)
         logging.info("{}".format(orburl))
         cmd = 'wget ' + orburl
-        execute(cmd)
+        execute(cmd,uselogging=True)
 
         execute("S1_OPOD_vec {}_001.slc.par *.EOF".format(acqdate))
         execute("S1_OPOD_vec {}_002.slc.par *.EOF".format(acqdate))

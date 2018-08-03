@@ -237,7 +237,7 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                 for myfile in glob.glob("{}/PRODUCT/*".format(mydir)):
                     shutil.move(myfile,"PRODUCTS/{}".format(os.path.basename(myfile)))
                 if not first:
-                    shutil.rmtree(mydir)
+                    shutil.rmtree(mydir,ignore_errors=True)
                 first = 0
 
     # Clip results to same bounding box

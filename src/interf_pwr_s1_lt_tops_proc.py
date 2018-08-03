@@ -43,45 +43,45 @@ def coregister_data(cnt,SLC2tab,SLC2Rtab,spar,mpar,mmli,smli,ifgname,master,slav
     srpar = slave + ".rslc.par" 
 
     cmd = "SLC_interp_lt_S1_TOPS {TAB2} {SPAR} {TAB1} {MPAR} {LT} {MMLI} {SMLI} {OFFIT} {TAB2R} {SRSLC} {SRPAR}".format(TAB1=SLC1tab,TAB2=SLC2tab,TAB2R=SLC2Rtab,SPAR=spar,MPAR=mpar,LT=lt,MMLI=mmli,SMLI=smli,SRSLC=srslc,SRPAR=srpar,OFFIT=offit)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
     cmd = "create_offset {MPAR} {SPAR} {OFFI} 1 {RL} {AL} 0".format(MPAR=mpar,SPAR=spar,IFG=ifgname,RL=rlooks,AL=alooks,OFFI=offi)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
     if (cnt < iter+1):
         cmd = "offset_pwr {M}.slc {S}.rslc {MPAR} {SRPAR} {OFFI} offs snr 256 64 offsets 1 64 256 0.2".format(M=master,S=slave,MPAR=mpar,SRPAR=srpar,IFG=ifgname,OFFI=offi)
     else:
         cmd = "offset_pwr {M}.slc {S}.rslc {MPAR} {SRPAR} {OFFI} offs snr 512 256 - 1 16 64 0.2".format(M=master,S=slave,MPAR=mpar,SRPAR=srpar,IFG=ifgname,OFFI=offi)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
     cmd = "offset_fit offs snr {OFFI} - - 0.2 1".format(IFG=ifgname,OFFI=offi)
     log = open("offsetfit{}.log".format(cnt),"w")
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
     log.close()
 
     if (cnt < iter+1):
         cmd = "SLC_diff_intf {M}.slc {S}.rslc {MPAR} {SRPAR} {OFFI} {IFG}.sim_unw {IFG}.diff0.it{I} {RL} {AL} 0 0".format(M=master,S=slave,MPAR=mpar,SRPAR=srpar,IFG=ifgname,RL=rlooks,AL=alooks,OFFI=offi,I=cnt)
     else:
         cmd = "SLC_diff_intf {M}.slc {S}.rslc {MPAR} {SRPAR} {OFFI} {IFG}.sim_unw {IFG}.diff0.man {RL} {AL} 0 0".format(M=master,S=slave,MPAR=mpar,SRPAR=srpar,IFG=ifgname,RL=rlooks,AL=alooks,OFFI=offi)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
     width = getParameter(offi,"interferogram_width")
     if (cnt < iter+1):
         cmd = "rasmph_pwr {IFG}.diff0.it{I} {M}.mli {W} 1 1 0 3 3".format(IFG=ifgname,M=master,W=width,I=cnt)
     else:
         cmd = "rasmph_pwr {IFG}.diff0.man {M}.mli {W} 1 1 0 3 3".format(IFG=ifgname,M=master,W=width,I=cnt)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     if (cnt == 0):
         offit = ifgname + ".off.it"
         shutil.copy(offi,offit)
     elif (cnt<iter+1):
         cmd = "offset_add {OFFIT} {OFFI} {OFFI}.temp".format(OFFIT=offit,OFFI=offi)
-        execute(cmd)
+        execute(cmd,uselogging=True)
         shutil.copy("{}.temp".format(offi),offit)
     else:
         cmd = "offset_add {OFFIT} {OFFI} {OFFIT}.out".format(OFFIT=offit,OFFI=offi)
-        execute(cmd)
+        execute(cmd,uselogging=True)
 
   
 def interf_pwr_s1_lt_tops_proc(master,slave,dem,rlooks=10,alooks=2,iter=5,step=0):
@@ -108,11 +108,11 @@ def interf_pwr_s1_lt_tops_proc(master,slave,dem,rlooks=10,alooks=2,iter=5,step=0
         logging.info("Input DEM file {} found".format(dem))
         logging.info("Preparing initial look up table and sim_unw file")
         cmd = "create_offset {MPAR} {SPAR} {OFF} 1 {RL} {AL} 0".format(MPAR=mpar,SPAR=spar,OFF=off,RL=rlooks,AL=alooks)
-        execute(cmd)
+        execute(cmd,uselogging=True)
         cmd = "rdc_trans {MMLI} {DEM} {SMLI} {LT}".format(MMLI=mmli,DEM=dem,SMLI=smli,M=master,LT=lt)
-        execute(cmd)
+        execute(cmd,uselogging=True)
         cmd = "phase_sim_orb {MPAR} {SPAR} {OFF} {DEM} {IFG}.sim_unw {MPAR} -".format(MPAR=mpar,SPAR=spar,OFF=off,DEM=dem,IFG=ifgname,M=master)
-        execute(cmd)
+        execute(cmd,uselogging=True)
     elif step == 1:
         logging.info("Starting initial coregistration with look up table")
         coregister_data(0,SLC2tab,SLC2Rtab,spar,mpar,mmli,smli,ifgname,master,slave,lt,rlooks,alooks,iter)

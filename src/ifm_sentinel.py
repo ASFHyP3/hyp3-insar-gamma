@@ -95,7 +95,7 @@ def getBursts(mydir,name):
     return time,total_bursts
 
 def getSelectBursts(masterDir,slaveDir,time):
-    logging.info("Finding selected bursts at time {} for length {}".format(time[0],time[1]))
+    logging.info("Finding selected bursts at times {}, {}, {} for length {}".format(time[0],time[1],time[2],time[3]))
     burst_tab1 = "%s_burst_tab" % masterDir[17:25]
     back = os.getcwd()
     f1 = open(burst_tab1,"w")
@@ -381,7 +381,7 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
 
     process_log("Starting s1_coreg_overlap")
     cmd  = "S1_coreg_overlap SLC1_tab SLC2R_tab {OUT} {OUT}.off.it {OUT}.off.it.corrected".format(OUT=output)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
 
     process_log("Starting interf_pwr_s1_lt_tops_proc.py 2")
     interf_pwr_s1_lt_tops_proc(master,slave,hgt,rlooks=rlooks,alooks=alooks,step=3)
@@ -398,16 +398,16 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     process_log("Collecting metadata and output files")
 
     cmd = "base_init {}.slc.par {}.slc.par - - base > baseline.log".format(master,slave)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
     os.chdir(wrk)
     
     etc_dir =  os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "etc"))
     shutil.copy(os.path.join(etc_dir,"sentinel_xml.xsl"),".")
 
     cmd = "xsltproc --stringparam path {PATH} --stringparam timestamp timestring --stringparam file_size 1000 --stringparam server stuff --output {M}.xml sentinel_xml.xsl {PATH}/manifest.safe".format(M=master,PATH=masterFile)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
     cmd = "xsltproc --stringparam path {PATH} --stringparam timestamp timestring --stringparam file_size 1000 --stringparam server stuff --output {S}.xml sentinel_xml.xsl {PATH}/manifest.safe".format(S=slave,PATH=slaveFile)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
  
     makeHDF5List(master,slave,outdir,output,dem_source,logname)
 
