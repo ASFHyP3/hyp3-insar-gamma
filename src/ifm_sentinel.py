@@ -145,7 +145,9 @@ def getBurstOverlaps(masterDir,slaveDir):
     f2 = open(burst_tab2,"w")    
     for name in ['001.xml','002.xml','003.xml']:
         time1,total_bursts1 = getBursts(masterDir,name)
+	logging.info("total_bursts1, time1 {} {}".format(total_bursts1,time1))
         time2,total_bursts2 = getBursts(slaveDir,name)
+	logging.info("total_bursts2, time2 {} {}".format(total_bursts2,time2))
         cnt = 1
         found = 0
         x = time1[0]
