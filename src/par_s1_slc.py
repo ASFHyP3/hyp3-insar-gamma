@@ -96,14 +96,21 @@ def par_s1_slc(pol=None):
         os.chdir(path)
 
         logging.info("Getting precision orbit for file {}".format(myfile))
-        (orburl,tmp) = getOrbFile(myfile)
-        logging.info("{}".format(orburl))
-        cmd = 'wget ' + orburl
-        execute(cmd,uselogging=True)
+        try:
+            (orburl,tmp) = getOrbFile(myfile)
+            logging.info("{}".format(orburl))
+            cmd = 'wget ' + orburl
+            execute(cmd,uselogging=True)
+        except Exception as e:
+            print "Error: "+str(e)
 
-        execute("S1_OPOD_vec {}_001.slc.par *.EOF".format(acqdate))
-        execute("S1_OPOD_vec {}_002.slc.par *.EOF".format(acqdate))
-        execute("S1_OPOD_vec {}_003.slc.par *.EOF".format(acqdate))
+        try:
+            execute("S1_OPOD_vec {}_001.slc.par *.EOF".format(acqdate))
+            execute("S1_OPOD_vec {}_002.slc.par *.EOF".format(acqdate))
+            execute("S1_OPOD_vec {}_003.slc.par *.EOF".format(acqdate))
+        except Exception as e:
+            print "Error: "+str(e)
+
 
         slc = glob.glob("*_00*.slc")
         slc.sort()
