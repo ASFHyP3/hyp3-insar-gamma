@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 ###############################################################################
-# procS1StackGAMMA_recipe.py 
+# procS1StackGAMMA.py 
 #
 # Project:   
 # Purpose:  Wrapper script for processing a stack of Sentinel-1 with Gamma
@@ -32,11 +32,17 @@
 # Import all needed modules right away
 #
 #####################
+import logging
 import sys
 import os
 from lxml import etree
 import re
 import math
+import zipfile
+import argparse
+import commands
+import glob
+import shutil
 from get_dem import get_dem
 from getSubSwath import get_bounding_box_file
 from prepGamma import prepGamma
@@ -44,22 +50,59 @@ from ifm_sentinel import gammaProcess
 from execute import execute
 from osgeo import gdal
 from utm2dem import utm2dem
-import zipfile
-import argparse
-import commands
-import glob
-import file_subroutines
 from getDemFor import getDemFile
+from apply_wb_mask import apply_wb_mask
+import file_subroutines
+import saa_func_lib as saa
+from get_zone import get_zone
 
 #####################
 #
 # Define procedures
 #
 #####################
+def getCorners(fi):
+    (x1,y1,t1,p1) = saa.read_gdal_file_geo(saa.open_gdal_file(fi))
+    ullon1 = t1[0]
+    ullat1 = t1[3]
+    lrlon1 = t1[0] + x1*t1[1]
+    lrlat1 = t1[3] + y1*t1[5]
+    return (ullon1,ullat1,lrlon1,lrlat1)
 
-def getDemFileGamma(filenames,use_opentopo,alooks):
 
-    demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
+def getDemFileGamma(filenames,use_opentopo,alooks,mask):
+
+    if not mask:
+        # Make the UTM dem directly
+        demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
+    else:
+        # Make a GCS DEM first
+        demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo)
+        tmpdem = "temp_mask_dem_{}.tif".format(os.getpid())
+
+        # Apply the water body mask
+        apply_wb_mask(demfile,tmpdem,maskval=-32767)
+      
+        # Figure out the projection information
+        xmin,ymax,xmax,ymin = getCorners(tmpdem)
+        zone = get_zone(xmin,xmax)
+        if (ymax+ymin) > 0:
+             # Northern hemisphere
+             proj = ('EPSG:326%02d' % int(zone))
+        else:
+             # Southern hemisphere
+             proj = ('EPSG:327%02d' % int(zone))
+   
+        # Set the pixel size
+        pixsize = 30.0
+        if demtype == "SRTMGL3":
+            pixsize = 90.
+        if demtype == "NED2":
+            pixsize = 60.
+
+        # Project the masked DEM into UTM space
+        gdal.Warp(demfile,tmpdem,dstSRS=proj,xRes=pixsize,yRes=pixsize,resampleAlg="cubic",dstNodata=-32767,creationOptions=['COMPRESS=LZW'])    
+
 
     # If we downsized the SAR image, downsize the DEM file
     # if alks == 1, then the SAR image is roughly 20 m square -> use native dem res
@@ -71,8 +114,9 @@ def getDemFileGamma(filenames,use_opentopo,alooks):
     # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
 
     pix_size = 20 * int(alooks) * 2;
-    gdal.Warp("tmpdem2.tif","tmpdem.tif",xRes=pix_size,yRes=pix_size,resampleAlg="average")
-    os.remove("tmpdem.tif")    
+    gdal.Warp("tmpdem2.tif",demfile,xRes=pix_size,yRes=pix_size,resampleAlg="cubic")
+    os.remove(demfile)
+    
     if use_opentopo == True:
       utm2dem("tmpdem2.tif","big.dem","big.par",dataType="int16")
     else:
@@ -84,20 +128,23 @@ def makeDirAndLinks(name1,name2,file1,file2,dem):
     if not os.path.exists(dirname):
         os.mkdir(dirname)
     os.chdir(dirname)
-    os.symlink("../%s" % file1,"%s" % file1)
-    os.symlink("../%s" % file2,"%s" % file2)
-    os.symlink("../%s.dem" % dem,"%s.dem" % dem)
-    os.symlink("../%s.par" % dem,"%s.par" % dem)
+    if not os.path.exists(file1):
+        os.symlink("../%s" % file1,"%s" % file1)
+    if not os.path.exists(file2):
+        os.symlink("../%s" % file2,"%s" % file2)
+    if not os.path.exists("%s.dem" % dem):
+        os.symlink("../%s.dem" % dem,"%s.dem" % dem)
+    if not os.path.exists("%s.par" % dem):
+        os.symlink("../%s.par" % dem,"%s.par" % dem)
     os.chdir('..')
 
 def makeParameterFile(mydir,alooks,rlooks,dem_source):
     res = 20 * int(alooks)        
     
-    os.chdir("%s" % mydir)
     master_date = mydir[:15]
     slave_date = mydir[17:]
    
-    print "In directory {} looking for file with date {}".format(os.getcwd(),master_date) 
+    logging.info("In directory {} looking for file with date {}".format(os.getcwd(),master_date)) 
     master_file = glob.glob("*%s*.SAFE" % master_date)[0]
     slave_file = glob.glob("*%s*.SAFE" % slave_date)[0]
 
@@ -116,11 +163,11 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
             root = etree.parse(myfile)
             for coord in root.iter('productFirstLineUtcTime'):
                 utc = coord.text
-                print "Found utc time {}".format(utc)
+                logging.info("Found utc time {}".format(utc))
     t = utc.split("T")
-    print t
+    logging.info("{}".format(t))
     s = t[1].split(":")
-    print s
+    logging.info("{}".format(s))
     utctime = ((int(s[0])*60+int(s[1]))*60)+float(s[2])
     os.chdir(back) 
  
@@ -157,7 +204,7 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
     f.write('Unwrapping threshold: none\n')
     f.write('Speckle filtering: off\n')
     f.close()
-    os.chdir("../..")  
+    os.chdir("..")  
     
 
 ###########################################################################
@@ -170,7 +217,9 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
 #	use_opentopo = flag for using opentopo instead of get_dem
 #
 ###########################################################################
-def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,inc_flag=None,look_flag=None,los_flag=None):
+def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
+                     inc_flag=None,look_flag=None,los_flag=None,proc_all=None,
+                     time=None,mask=False):
 
     # If file list is given, download the files
     if csvFile is not None:
@@ -178,31 +227,43 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
   
     (filenames,filedates) = file_subroutines.get_file_list()
     
-    print filenames
-    print filedates
+    logging.info("{}".format(filenames))
+    logging.info("{}".format(filedates))
 
     # If no DEM is given, determine one from first file
     if dem is None:
-        dem, dem_source = getDemFileGamma(filenames,use_opentopo,alooks)
+        dem, dem_source = getDemFileGamma(filenames,use_opentopo,alooks,mask)
     else: 
         dem_source = "UNKNOWN"
 
     length=len(filenames)
 
-    # Make directory and link files for pairs and 2nd pairs
-    for x in xrange(length-2):
-        makeDirAndLinks(filedates[x],filedates[x+1],filenames[x],filenames[x+1],dem)
-        makeDirAndLinks(filedates[x],filedates[x+2],filenames[x],filenames[x+2],dem)
-
+    if not proc_all:
+         # Make directory and link files for pairs and 2nd pairs
+         for x in xrange(length-2):
+             makeDirAndLinks(filedates[x],filedates[x+1],filenames[x],filenames[x+1],dem)
+             makeDirAndLinks(filedates[x],filedates[x+2],filenames[x],filenames[x+2],dem)
+    else:
+         # Make directory and link files for ALL possible pairs
+         for i in xrange(length):
+             for j in xrange(i+1,length):
+                 makeDirAndLinks(filedates[i],filedates[j],filenames[i],filenames[j],dem)
+            
     # If we have anything to process
     if (length > 1) :
-        # Make directory and link files for last pair
-        makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
+        if not proc_all:
+            # Make directory and link files for last pair
+            makeDirAndLinks(filedates[length-2],filedates[length-1],filenames[length-2],filenames[length-1],dem)
 
         # Run through directories processing ifgs as we go
-        for mydir in os.listdir("."):
+        if not os.path.exists("PRODUCTS"):
+            os.mkdir("PRODUCTS")
+        first = 1
+	dirs = os.listdir(".")
+	dirs.sort
+        for mydir in dirs:
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
-                print "Processing directory %s" % mydir
+                logging.info("Processing directory %s" % mydir)
                 os.chdir(mydir)
                 master = mydir.split("_")[0]
                 slave = mydir.split("_")[1]
@@ -212,13 +273,20 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                     if slave in myfile:
                         slaveFile = myfile
                 gammaProcess(masterFile,slaveFile,"IFM",dem=dem,rlooks=rlooks,alooks=alooks,
-                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag)
-                os.chdir("..") 
+                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag,time=time)
                 makeParameterFile(mydir,alooks,rlooks,dem_source)
+                os.chdir("..")
+                shutil.move("{}/IFM/DEM/demseg.par".format(mydir),
+                            "PRODUCTS/{}_demseg.par".format(mydir))
+                for myfile in glob.glob("{}/PRODUCT/*".format(mydir)):
+                    shutil.move(myfile,"PRODUCTS/{}".format(os.path.basename(myfile)))
+                if not first:
+                    shutil.rmtree(mydir,ignore_errors=True)
+                first = 0
 
     # Clip results to same bounding box
-    if (length > 2):
-        prepGamma()
+    # if (length > 2):
+    #    prepGamma()
 
 
 ###########################################################################
@@ -235,7 +303,17 @@ if __name__ == '__main__':
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-r","--rlooks",default=20,help="Number of range looks (def=20)")
   parser.add_argument("-a","--alooks",default=4,help="Number of azimuth looks (def=4)")
+  parser.add_argument("-p",action="store_true",help="Process ALL possible pairs")
+  parser.add_argument("-t",nargs=4,metavar=("t1","t2","t3","length"),help="Start times and number of selected bursts to process")
+  parser.add_argument("-m","--mask",action="store_true",help="Apply water body mask to DEM file prior to processing")
   args = parser.parse_args()
 
-  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,inc_flag=args.i,look_flag=args.l,los_flag=args.s)
+  logFile = "procS1StackGAMMA_{}_log.txt".format(os.getpid())
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
+
+  procS1StackGAMMA(alooks=args.alooks,rlooks=args.rlooks,csvFile=args.file,dem=args.dem,use_opentopo=args.o,
+                   inc_flag=args.i,look_flag=args.l,los_flag=args.s,proc_all=args.p,time=args.t,mask=args.mask)
 
