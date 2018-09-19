@@ -33,6 +33,7 @@
 #
 #####################
 
+import logging
 import argparse
 import os, re
 import datetime
@@ -79,40 +80,80 @@ def getDemFileGamma(filename,use_opentopo,alooks):
       utm2dem("tmpdem2.tif","big.dem","big.par")
     return("big",type)
 
+def getBursts(mydir,name):
+    back = os.getcwd()
+    os.chdir(os.path.join(mydir,"annotation"))
+    time = []
+    for myfile in os.listdir("."):
+        if name in myfile:
+            root = etree.parse(myfile)
+            for coord in root.iter('azimuthAnxTime'):
+                time.append(float(coord.text))
+            for count in root.iter('burstList'):
+                total_bursts=int(count.attrib['count'])
+    os.chdir(back) 
+    return time,total_bursts
+
+def getSelectBursts(masterDir,slaveDir,time):
+    logging.info("Finding selected bursts at times {}, {}, {} for length {}".format(time[0],time[1],time[2],time[3]))
+    burst_tab1 = "%s_burst_tab" % masterDir[17:25]
+    back = os.getcwd()
+    f1 = open(burst_tab1,"w")
+    burst_tab2 = "%s_burst_tab" % slaveDir[17:25]
+    f2 = open(burst_tab2,"w")    
+    size = float(time[3])
+    xml_cnt = 0
+    for name in ['001.xml','002.xml','003.xml']:
+        time1,total_bursts1 = getBursts(masterDir,name)
+        time2,total_bursts2 = getBursts(slaveDir,name)
+        cnt = 1
+        found1 = 0
+        for x in time1:
+            if (abs(float(x)-float(time[xml_cnt])) < 0.20):
+                logging.info("Found selected burst at {}".format(cnt))
+                found1 = 1
+                start1 = cnt
+            cnt = cnt + 1
+        cnt = 1
+        found2 = 0
+        for x in time2:
+            if (abs(float(x)-float(time[xml_cnt])) < 0.20):
+                logging.info("Found selected burst at {}".format(cnt))
+                found2 = 1
+                start2 = cnt
+            cnt = cnt + 1
+      
+        if not found1 or not found2:
+            logging.error("ERROR: Unable to find bursts at selected time")
+            exit(1)
+
+        f1.write("%s %s\n" % (start1, start1+size-1))
+        f2.write("%s %s\n" % (start2, start2+size-1))
+        
+	xml_cnt += 1
+	
+    f1.close()
+    f2.close()
+    return(burst_tab1,burst_tab2)
+
 def getBurstOverlaps(masterDir,slaveDir):
-    print "Calculating burst overlaps; in directory {}".format(os.getcwd())
+    logging.info("Calculating burst overlaps; in directory {}".format(os.getcwd()))
     burst_tab1 = "%s_burst_tab" % masterDir[17:25]
     back = os.getcwd()
     f1 = open(burst_tab1,"w")
     burst_tab2 = "%s_burst_tab" % slaveDir[17:25]
     f2 = open(burst_tab2,"w")    
     for name in ['001.xml','002.xml','003.xml']:
-        time1 = []
-        time2 = []
-        os.chdir(os.path.join(masterDir,"annotation"))
-        for myfile2 in os.listdir("."):
-            if name in myfile2:
-                root = etree.parse(myfile2)
-                for coord in root.iter('azimuthAnxTime'):
-                    time1.append(float(coord.text))
-                for count in root.iter('burstList'):
-                    total_bursts1=int(count.attrib['count'])
-        os.chdir(back) 
-        os.chdir(os.path.join(slaveDir,"annotation"))
-        for myfile2 in os.listdir("."):
-            if name in myfile2:
-                root = etree.parse(myfile2)
-                for coord in root.iter('azimuthAnxTime'):
-                    time2.append(float(coord.text))
-                for count in root.iter('burstList'):
-                    total_bursts2=int(count.attrib['count'])
-        os.chdir(back) 
+        time1,total_bursts1 = getBursts(masterDir,name)
+	logging.info("total_bursts1, time1 {} {}".format(total_bursts1,time1))
+        time2,total_bursts2 = getBursts(slaveDir,name)
+	logging.info("total_bursts2, time2 {} {}".format(total_bursts2,time2))
         cnt = 1
         found = 0
         x = time1[0]
         for y in time2:
             if (abs(x-y) < 0.20):
-                print "Found burst match at 1 %s" % cnt
+                logging.info("Found burst match at 1 %s" % cnt)
                 found = 1
                 start1 = 1
                 start2 = cnt
@@ -123,7 +164,7 @@ def getBurstOverlaps(masterDir,slaveDir):
             cnt = 1
             for x in time1:
                 if (abs(x-y) < 0.20):
-                    print "Found burst match at %s 1" % cnt
+                    logging.info("Found burst match at %s 1" % cnt)
                     found = 1
                     start1 = cnt
                     start2 = 1
@@ -226,15 +267,13 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
                   "{}_unw_phase".format(os.path.join(prod_dir,long_output)))
 
 
-
-    
 def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_flag=False,
-    look_flag=False,los_flag=False,ot_flag=False,cp_flag=False):
+    look_flag=False,los_flag=False,ot_flag=False,cp_flag=False,time=None):
 
     global proc_log
 
-    print "\n\nSentinel1A differential interferogram creation program\n"
-    print "Creating output interferogram in directory {}\n\n".format(outdir)
+    logging.info("\n\nSentinel1A differential interferogram creation program\n")
+    logging.info("Creating output interferogram in directory {}\n\n".format(outdir))
 
     #
     #  Set some variables and open log files
@@ -251,10 +290,10 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     process_log("starting processing")
 
     if not "IW_SLC__" in masterFile:
-        print "ERROR: Master file {} is not of type IW_SLC!".format(masterFile)
+        logging.error("ERROR: Master file {} is not of type IW_SLC!".format(masterFile))
         exit(1)
     if not "IW_SLC__" in slaveFile:
-        print "ERROR: Slave file {} is not of type IW_SLC!".format(slaveFile)
+        logging.error("ERROR: Slave file {} is not of type IW_SLC!".format(slaveFile))
         exit(1)
   
     type, pol = getFileType(masterFile)
@@ -265,10 +304,10 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
         elif type == "SDH":
             pol = "hv"
         else:
-            print "Flag type mismatch -- processing {}".format(pol)
-        print "Setting pol to {}".format(pol)
+            logging.info("Flag type mismatch -- processing {}".format(pol))
+        logging.info("Setting pol to {}".format(pol))
 
-    print "Processing the {} polarization".format(pol)
+    logging.info("Processing the {} polarization".format(pol))
 
     #
     #  Ingest the data files into gamma format
@@ -291,8 +330,12 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     #
     # Figure out which bursts overlap between the two swaths 
     #
-    (burst_tab1,burst_tab2) = getBurstOverlaps(masterFile,slaveFile)
-    print "Finished calculating overlap - in directory {}".format(os.getcwd())
+    if time is None:
+        (burst_tab1,burst_tab2) = getBurstOverlaps(masterFile,slaveFile)
+    else:
+        (burst_tab1,burst_tab2) = getSelectBursts(masterFile,slaveFile,time)
+        
+    logging.info("Finished calculating overlap - in directory {}".format(os.getcwd()))
     shutil.move(burst_tab1,masterDateShort)
     shutil.move(burst_tab2,slaveDateShort)
 
@@ -331,15 +374,16 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
         if "final azimuth offset poly. coeff.:" in line:
             offset = line.split(":")[1]
     if float(offset) > 0.02:
-        print "ERROR: Found azimuth offset of {}!".format(offset)
+        logging.error("ERROR: Found azimuth offset of {}!".format(offset))
+        exit(1)
     else:
-        print "Found azimuth offset of {}!".format(offset)
+        logging.info("Found azimuth offset of {}!".format(offset))
 
     output = masterDateShort + "_" + slaveDateShort
 
     process_log("Starting s1_coreg_overlap")
     cmd  = "S1_coreg_overlap SLC1_tab SLC2R_tab {OUT} {OUT}.off.it {OUT}.off.it.corrected".format(OUT=output)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
 
     process_log("Starting interf_pwr_s1_lt_tops_proc.py 2")
     interf_pwr_s1_lt_tops_proc(master,slave,hgt,rlooks=rlooks,alooks=alooks,step=3)
@@ -356,16 +400,16 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     process_log("Collecting metadata and output files")
 
     cmd = "base_init {}.slc.par {}.slc.par - - base > baseline.log".format(master,slave)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
     os.chdir(wrk)
     
     etc_dir =  os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "etc"))
     shutil.copy(os.path.join(etc_dir,"sentinel_xml.xsl"),".")
 
     cmd = "xsltproc --stringparam path {PATH} --stringparam timestamp timestring --stringparam file_size 1000 --stringparam server stuff --output {M}.xml sentinel_xml.xsl {PATH}/manifest.safe".format(M=master,PATH=masterFile)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
     cmd = "xsltproc --stringparam path {PATH} --stringparam timestamp timestring --stringparam file_size 1000 --stringparam server stuff --output {S}.xml sentinel_xml.xsl {PATH}/manifest.safe".format(S=slave,PATH=slaveFile)
-    execute(cmd,logfile=log)
+    execute(cmd,uselogging=True,logfile=log)
  
     makeHDF5List(master,slave,outdir,output,dem_source,logname)
 
@@ -378,7 +422,7 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     move_output_files(outdir,output,master,prod_dir,igramName,los_flag,inc_flag,look_flag)
 
     process_log("Done!!!")
-    print "Done!!!"
+    logging.info("Done!!!")
 
 
 if __name__ == '__main__':
@@ -397,9 +441,17 @@ if __name__ == '__main__':
   parser.add_argument("-s",action="store_true",help="Create line of sight displacement file")
   parser.add_argument("-o",action="store_true",help="Use opentopo to get the DEM file instead of get_dem")
   parser.add_argument("-c",action="store_true",help="cross pol processing - either hv or vh (default hh or vv)")
+  parser.add_argument("-t",nargs=4,type=float,help="Start processing at time for length bursts",
+                      metavar=('t1','t2','t3','length'))
   args = parser.parse_args()
 
+  logFile = "ifm_sentinel_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
+
   gammaProcess(args.master,args.slave,args.output,dem=args.dem,rlooks=args.rlooks,alooks=args.alooks,
-    inc_flag=args.i,look_flag=args.l,los_flag=args.s,ot_flag=args.o,cp_flag=args.c)
+    inc_flag=args.i,look_flag=args.l,los_flag=args.s,ot_flag=args.o,cp_flag=args.c,time=args.t)
 
 

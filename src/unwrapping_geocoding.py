@@ -1,4 +1,6 @@
 #!/usr/bin/python
+
+import logging
 import argparse
 import os
 from getParameter import getParameter
@@ -6,11 +8,11 @@ from execute import execute
 
 def geocode_back(inname,outname,width,lt,demw,demn,type):
     cmd = "geocode_back {IN} {W} {LT} {OUT} {DEMW} {DEMN} 0 {TYPE}".format(IN=inname,W=width,LT=lt,OUT=outname,DEMW=demw,DEMN=demn,TYPE=type)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
 def data2geotiff(inname,outname,dempar,type):
     cmd = "data2geotiff {DEM} {IN} {TYPE} {OUT}".format(DEM=dempar,IN=inname,OUT=outname,TYPE=type)
-    execute(cmd)
+    execute(cmd,uselogging=True)
 
 def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode=0, 
     npatr=1, npata=1, alpha=0.6):
@@ -24,13 +26,13 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     smli = slave + ".mli"
     
     if not os.path.isfile(dempar):
-        print "ERROR: Unable to find dem par file {}".format(dempar)
+        logging.error("ERROR: Unable to find dem par file {}".format(dempar))
     
     if not os.path.isfile(lt):
-        print "ERROR: Unable to find look up table file {}".format(lt)
+        logging.error("ERROR: Unable to find look up table file {}".format(lt))
     
     if not os.path.isfile(offit):
-        print "ERROR: Unable to find offset file {}".format(offit)
+        logging.error("ERROR: Unable to find offset file {}".format(offit))
     
     width = getParameter(offit,"interferogram_width")
     nline = getParameter(offit,"interferogram_azimuth_lines")
@@ -39,53 +41,54 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     
     ifgf = "{}.diff0.{}".format(ifgname,step)
     
-    print "{} will be used for unwrapping and geocoding".format(ifgf)
+    logging.info("{} will be used for unwrapping and geocoding".format(ifgf))
     
-    print "-------------------------------------------------"
-    print "            Start unwrapping"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            Start unwrapping")
+    logging.info("-------------------------------------------------")
 
     cmd = "adf {IFGF} {IFGF}.adf {IFG}.adf.cc {W} {A} - 5".format(IFGF=ifgf,IFG=ifgname,W=width,A=alpha)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "rasmph_pwr {IFGF}.adf {MMLI} {W}".format(IFGF=ifgf,MMLI=mmli,W=width)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "rascc {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 .1 .9 - - - {IFG}.adf.cc.ras".format(IFG=ifgname,MMLI=mmli,W=width)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
-    cmd = "rascc_mask {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 0.05 ".format(IFG=ifgname,MMLI=mmli,W=width)
-    execute(cmd)
+    cmd = "rascc_mask {IFG}.adf.cc {MMLI} {W} 1 1 0 1 1 0.10 0.20 ".format(IFG=ifgname,MMLI=mmli,W=width)
+    execute(cmd,uselogging=True)
     
-#    cmd = "mcf {IFGF}.adf {IFG}.adf.cc {IFG}.adf.cc_mask.bmp {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
+    cmd = "mcf {IFGF}.adf {IFG}.adf.cc {IFG}.adf.cc_mask.bmp {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
+        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
+
+#    cmd = "mcf {IFGF}.adf {IFG}.adf.cc - {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
 #        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
 
-    cmd = "mcf {IFGF}.adf {IFG}.adf.cc - {IFG}.adf.unw {W} {TRI} 0 0 - - {NPR} {NPA}".format(
-        IFGF=ifgf,IFG=ifgname,W=width,TRI=trimode,NPR=npatr,NPA=npata)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd="rasrmg {IFG}.adf.unw {MMLI} {W} 1 1 0 1 1 0.33333 1.0 .35 0.0 - {IFG}.adf.unw.ras".format(IFG=ifgname,MMLI=mmli,W=width)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "dispmap {IFG}.adf.unw DEM/HGT_SAR_{RL}_{AL} {MMLI}.par - {IFG}.vert.disp 1".format(IFG=ifgname,RL=rlooks,AL=alooks,MMLI=mmli)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "rashgt {IFG}.vert.disp - {W} 1 1 0 1 1 0.028".format(IFG=ifgname,W=width)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "dispmap {IFG}.adf.unw DEM/HGT_SAR_{RL}_{AL} {MMLI}.par - {IFG}.los.disp 0".format(IFG=ifgname,RL=rlooks,AL=alooks,MMLI=mmli)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     
     cmd = "rashgt {IFG}.los.disp - {W} 1 1 0 1 1 0.028".format(IFG=ifgname,W=width)
-    execute(cmd)
+    execute(cmd,uselogging=True)
   
-    print "-------------------------------------------------"
-    print "            End unwrapping"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            End unwrapping")
+    logging.info("-------------------------------------------------")
     
-    print "-------------------------------------------------"
-    print "            Start geocoding"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            Start geocoding")
+    logging.info("-------------------------------------------------")
     
     geocode_back(mmli,mmli+".geo",width,lt,demw,demn,0)
     geocode_back(smli,smli+".geo",width,lt,demw,demn,0)
@@ -114,13 +117,13 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     data2geotiff("{}.los.disp.geo".format(ifgname),"{}.los.disp.geo.org.tif".format(ifgname),dempar,2)
     data2geotiff("DEM/inc_flat","{}.inc.tif".format(ifgname),dempar,2)
     cmd = "look_vector {MMLI}.par {OFFIT} {DEMPAR} {DEM} lv_theta lv_phi".format(MMLI=mmli,OFFIT=offit,DEMPAR=dempar,DEM=dem)
-    execute(cmd)
+    execute(cmd,uselogging=True)
     data2geotiff("lv_theta","{}.lv_theta.tif".format(ifgname),dempar,2)
     data2geotiff("lv_phi","{}.lv_phi.tif".format(ifgname),dempar,2)
     
-    print "-------------------------------------------------"
-    print "            End geocoding"
-    print "-------------------------------------------------"
+    logging.info("-------------------------------------------------")
+    logging.info("            End geocoding")
+    logging.info("-------------------------------------------------")
     
 
 if __name__ == '__main__':
@@ -137,6 +140,12 @@ if __name__ == '__main__':
   parser.add_argument("--npatr",default=1,help="Number of patches in range (def=1)")
   parser.add_argument("--npata",default=1,help="Number of patches in azimuth (def=1)")
   args = parser.parse_args()
+
+  logFile = "unwrapping_geocoding_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
 
   unwrapping_geocoding(args.master, args.slave, step=args.step, rlooks=args.rlooks, alooks=args.alooks,
       trimode=args.tri,npatr=args.npatr,npata=args.npata,alpha=args.alpha)

@@ -32,6 +32,7 @@
 # Import all needed modules right away
 #
 #####################
+import logging
 import sys
 import os
 import re
@@ -56,41 +57,38 @@ def get_projection():
 
 def read_file_list(name,north,east,width,nlines,south,west,posting):
     x = 0
-    for mydir in os.listdir("."):
-        if len(mydir)==17 and os.path.isdir(mydir):
-            name.append(mydir)
-            os.chdir("%s/IFM/DEM" % mydir)
-            g = open('demseg.par','r')
-            for line in g.readlines():
-                if "width:" in line:
-                    t = re.split(':',line)
-                    w = t[1].split()
-                    width.append(int(w[0]))
-                elif "nlines:" in line:
-                    t = re.split(':',line)
-                    l = t[1].split()
-                    nlines.append(int(l[0]))
-                elif "corner_north:" in line:
-                    t = re.split(':',line)
-                    n = t[1].split()
-                    north.append(float(n[0]))
-                elif "corner_east:" in line:
-                    t = re.split(':',line)
-                    e = t[1].split()
-                    east.append(float(e[0]))
-                elif "post_north:" in line:
-                    t = re.split(':',line)
-                    p = t[1].split()
-                    posting.append(float(p[0]))
-                  
-            g.close() 
-            s = north[x] + (posting[x] * nlines[x])
-            south.append(s)
-            w = east[x] - (posting[x] * width[x])
-            west.append(w)
-            os.chdir("../../..")
-            x = x + 1
-
+    os.chdir("PRODUCTS")
+    for myfile in glob.glob("*_demseg.par"):
+        g = open(myfile,'r')
+        for line in g.readlines():
+            if "width:" in line:
+                t = re.split(':',line)
+                w = t[1].split()
+                width.append(int(w[0]))
+            elif "nlines:" in line:
+                t = re.split(':',line)
+                l = t[1].split()
+                nlines.append(int(l[0]))
+            elif "corner_north:" in line:
+                t = re.split(':',line)
+                n = t[1].split()
+                north.append(float(n[0]))
+            elif "corner_east:" in line:
+                t = re.split(':',line)
+                e = t[1].split()
+                east.append(float(e[0]))
+            elif "post_north:" in line:
+                t = re.split(':',line)
+                p = t[1].split()
+                posting.append(float(p[0]))
+              
+        g.close() 
+        s = north[x] + (posting[x] * nlines[x])
+        south.append(s)
+        w = east[x] - (posting[x] * width[x])
+        west.append(w)
+        x = x + 1
+    os.chdir("..")
 
 def get_bounding_box_utm(north,east,south,west,posting):
     length = len(north)
@@ -113,7 +111,7 @@ def cut_image_to_box(name,north,east,width,nlines,w,l,n,e,post):
     first_line = int((n-north)/post)
     first_samp = int((east-e)/post)
     cnt = 0
-    print "Clipping image %s from line %s to %s and samples %s to %s" % (name,first_line,l+first_line,first_samp,w+first_samp)
+    logging.info("Clipping image %s from line %s to %s and samples %s to %s" % (name,first_line,l+first_line,first_samp,w+first_samp))
     read_size = width * 4
     hi = int(w+first_samp) * 4
     lo = int(first_samp) * 4
@@ -188,6 +186,12 @@ def prepGamma():
 
 if __name__ == "__main__":
 
-    prepGamma()
+  logFile = "prep_gamma_log.txt"
+  logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+  logging.getLogger().addHandler(logging.StreamHandler())
+  logging.info("Starting run")
+  
+  prepGamma()
     
    
