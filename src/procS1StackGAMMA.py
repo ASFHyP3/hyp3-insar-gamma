@@ -43,7 +43,6 @@ import argparse
 import commands
 import glob
 import shutil
-from get_dem import get_dem
 from getSubSwath import get_bounding_box_file
 from prepGamma import prepGamma
 from ifm_sentinel import gammaProcess
@@ -61,14 +60,6 @@ from get_zone import get_zone
 # Define procedures
 #
 #####################
-def getCorners(fi):
-    (x1,y1,t1,p1) = saa.read_gdal_file_geo(saa.open_gdal_file(fi))
-    ullon1 = t1[0]
-    ullat1 = t1[3]
-    lrlon1 = t1[0] + x1*t1[1]
-    lrlat1 = t1[3] + y1*t1[5]
-    return (ullon1,ullat1,lrlon1,lrlat1)
-
 
 def getDemFileGamma(filenames,use_opentopo,alooks,mask):
 
@@ -76,33 +67,39 @@ def getDemFileGamma(filenames,use_opentopo,alooks,mask):
         # Make the UTM dem directly
         demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
     else:
-        # Make a GCS DEM first
-        demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo)
-        tmpdem = "temp_mask_dem_{}.tif".format(os.getpid())
+        # Make a DEM
+	print "Calling getDemFile"
+        print "Getting corners for {}".format(filenames[0])
+	
+        ymax,ymin,xmax,xmin = get_bounding_box_file(filenames[0])
+        logging.info("Using corners coordinates: {} {} {} {}".format(xmin,xmax,ymin,ymax))	
 
-        # Apply the water body mask
-        apply_wb_mask(demfile,tmpdem,maskval=-32767)
-      
-        # Figure out the projection information
-        xmin,ymax,xmax,ymin = getCorners(tmpdem)
-        zone = get_zone(xmin,xmax)
-        if (ymax+ymin) > 0:
-             # Northern hemisphere
-             proj = ('EPSG:326%02d' % int(zone))
+        if (xmax >= 177 and xmin <= -177):
+            logging.info("Using anti-meridian special code")
+        
+            demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
+            tmpdem = "temp_mask_dem_{}.tif".format(os.getpid())
+
+            # Apply the water body mask
+            apply_wb_mask(demfile,tmpdem,maskval=-32767,gcs=False)
+            shutil.move(tmpdem,demfile)
+
         else:
-             # Southern hemisphere
-             proj = ('EPSG:327%02d' % int(zone))
-   
-        # Set the pixel size
-        pixsize = 30.0
-        if demtype == "SRTMGL3":
-            pixsize = 90.
-        if demtype == "NED2":
-            pixsize = 60.
+            demfile,demtype = getDemFile(filenames[0],"tmpdem.tif",opentopoFlag=use_opentopo)
+            tmpdem = "temp_mask_dem_{}.tif".format(os.getpid())
 
-        # Project the masked DEM into UTM space
-        gdal.Warp(demfile,tmpdem,dstSRS=proj,xRes=pixsize,yRes=pixsize,resampleAlg="cubic",dstNodata=-32767,creationOptions=['COMPRESS=LZW'])    
+            # Apply the water body mask
+            apply_wb_mask(demfile,tmpdem,maskval=-32767,gcs=True)
+     
+            # Reproject DEM file into UTM coordinates
+	    pixsize = 30.0
+            if demtype == "SRTMGL3":
+                pixsize = 90.
+            if demtype == "NED2":
+                pixsize = 60.
 
+            reproject_gcs_to_utm(tmpdem,demfile,pixsize)
+     
 
     # If we downsized the SAR image, downsize the DEM file
     # if alks == 1, then the SAR image is roughly 20 m square -> use native dem res
@@ -114,8 +111,10 @@ def getDemFileGamma(filenames,use_opentopo,alooks,mask):
     # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
 
     pix_size = 20 * int(alooks) * 2;
-    gdal.Warp("tmpdem2.tif",demfile,xRes=pix_size,yRes=pix_size,resampleAlg="cubic")
+    gdal.Warp("tmpdem2.tif",demfile,xRes=pix_size,yRes=pix_size,resampleAlg="cubic",dstNodata=-32767,creationOptions=['COMPRESS=LZW'])
     os.remove(demfile)
+
+    shutil.copy("tmpdem2.tif","resamp_dem_after_mask.tif")
     
     if use_opentopo == True:
       utm2dem("tmpdem2.tif","big.dem","big.par",dataType="int16")
