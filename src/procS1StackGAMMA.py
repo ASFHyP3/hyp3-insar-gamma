@@ -98,7 +98,7 @@ def getDemFileGamma(filenames,use_opentopo,alooks,mask):
             if demtype == "NED2":
                 pixsize = 60.
 
-            reproject_gcs_to_utm(tmpdem,demfile,pixsize)
+            saa.reproject_gcs_to_utm(tmpdem,demfile,pixsize)
      
 
     # If we downsized the SAR image, downsize the DEM file
