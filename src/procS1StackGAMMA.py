@@ -98,7 +98,7 @@ def getDemFileGamma(filenames,use_opentopo,alooks,mask):
             if demtype == "NED2":
                 pixsize = 60.
 
-            reproject_gcs_to_utm(tmpdem,demfile,pixsize)
+            saa.reproject_gcs_to_utm(tmpdem,demfile,pixsize)
      
 
     # If we downsized the SAR image, downsize the DEM file
@@ -114,8 +114,6 @@ def getDemFileGamma(filenames,use_opentopo,alooks,mask):
     gdal.Warp("tmpdem2.tif",demfile,xRes=pix_size,yRes=pix_size,resampleAlg="cubic",dstNodata=-32767,creationOptions=['COMPRESS=LZW'])
     os.remove(demfile)
 
-    shutil.copy("tmpdem2.tif","resamp_dem_after_mask.tif")
-    
     if use_opentopo == True:
       utm2dem("tmpdem2.tif","big.dem","big.par",dataType="int16")
     else:
