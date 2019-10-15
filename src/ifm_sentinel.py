@@ -50,6 +50,7 @@ from getDemFor import getDemFile
 from osgeo import gdal
 from lxml import etree
 from makeAsfBrowse import makeAsfBrowse
+from make_arc_thumb import pngtothumb
 global lasttime
 global log
 global proc_log
@@ -71,7 +72,6 @@ def getDemFileGamma(filename,use_opentopo,alooks):
     # The DEM is set to double the res because it will be 1/2'd by the procedure
     # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
 
-    pix_size = 20 * int(alooks) * 2
     gdal.Warp("tmpdem2.tif","tmpdem.tif",xRes=pix_size,yRes=pix_size,resampleAlg="average")
     os.remove("tmpdem.tif")    
     if use_opentopo == True:
@@ -232,7 +232,8 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
 
     inName = "{}.adf.cc.geo.tif".format(os.path.join(outdir,output))
     outName = "{}_corr.tif".format(os.path.join(prod_dir,long_output))
-    shutil.copy(inName,outName)
+    if os.path.isfile(inName):
+        shutil.copy(inName,outName)
 
     inName = "{}.vert.disp.geo.org.tif".format(os.path.join(outdir,output))
     outName = "{}_vert_disp.tif".format(os.path.join(prod_dir,long_output))
@@ -265,6 +266,67 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
     
     makeAsfBrowse("{}.adf.unw.geo.bmp.tif".format(os.path.join(outdir,output)),
                   "{}_unw_phase".format(os.path.join(prod_dir,long_output)))
+
+
+def create_readme_file(refFile,secFile,outfile,pixelSize):
+
+    looks = pixelSize / 20
+    txtlooks = "{}x{}".format(looks*5,looks)
+
+    etcdir = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "etc"))
+    back = os.getcwd()
+    os.chdir("PRODUCT")
+    now = datetime.datetime.now()
+    date = now.strftime("%Y%m%d")
+    time = now.strftime("%H%M%S")
+    dt = now.strftime("%Y-%m-%dT%H:%M:%S")
+    year = now.year
+
+    pngfile = "{}_unw_phase.png".format(outfile)
+    encoded_jpg = pngtothumb(pngfile)
+
+    basename = os.path.basename(refFile)
+    refname = os.path.splitext(basename)[0]
+    basename = os.path.basename(secFile)
+    secname = os.path.splitext(basename)[0]
+
+    ver_file = "{}/version.txt".format(etcdir)
+    hyp3_ver = None
+    if os.path.exists(ver_file):
+        f = open(ver_file,"r")
+        for line in f:
+            hyp3_ver = line.strip()
+    else:
+        logging.warning("No version.txt file found in {}".format(etcdir))
+
+    ver_file = "{}/ASF_Gamma_version.txt".format(os.environ['GAMMA_HOME'])
+    gamma_ver = None
+    if os.path.exists(ver_file):
+        f = open(ver_file,"r")
+        for line in f:
+            gamma_ver = line.strip()
+    else:
+        logging.warning("No ASF_Gamma_version.txt file found in {}".format(os.environ['GAMMA_HOME']))
+
+    f = open("{}/README_GammaInSAR.txt".format(etcdir),"r")
+    g = open("README.txt","w")
+
+    for line in f:
+        line = line.replace("[DATE]",date)
+        line = line.replace("[TIME]","{}00".format(time))
+        line = line.replace("[REF_NAME]",refname)
+        line = line.replace("[SEC_NAME]",secname)
+        line = line.replace("[YEARPROCESSED]","{}".format(year))
+        line = line.replace("[YEARACQUIRED]",refname[17:21])
+        line = line.replace("[LOOKS]","{}".format(txtlooks))
+        line = line.replace("[SPACING]","{}".format(pixelSize))
+        line = line.replace("[HYP3_VER]","{}".format(hyp3_ver))
+        line = line.replace("[GAMMA_VER]","{}".format(gamma_ver))
+        g.write("{}".format(line))
+    f.close()
+    g.close()
+
+    os.chdir(back)
 
 
 def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_flag=False,
@@ -420,6 +482,8 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     if not os.path.exists(prod_dir):
         os.mkdir("PRODUCT") 
     move_output_files(outdir,output,master,prod_dir,igramName,los_flag,inc_flag,look_flag)
+
+    create_readme_file(masterFile,slaveFile,igramName,int(alooks)*20)
 
     process_log("Done!!!")
     logging.info("Done!!!")
