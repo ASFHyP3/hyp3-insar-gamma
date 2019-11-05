@@ -44,7 +44,6 @@ import commands
 import glob
 import shutil
 from getSubSwath import get_bounding_box_file
-from prepGamma import prepGamma
 from ifm_sentinel import gammaProcess
 from execute import execute
 from osgeo import gdal
@@ -275,18 +274,11 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                   inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag,time=time)
                 makeParameterFile(mydir,alooks,rlooks,dem_source)
                 os.chdir("..")
-                shutil.move("{}/IFM/DEM/demseg.par".format(mydir),
-                            "PRODUCTS/{}_demseg.par".format(mydir))
                 for myfile in glob.glob("{}/PRODUCT/*".format(mydir)):
                     shutil.move(myfile,"PRODUCTS/{}".format(os.path.basename(myfile)))
                 if not first:
                     shutil.rmtree(mydir,ignore_errors=True)
                 first = 0
-
-    # Clip results to same bounding box
-    # if (length > 2):
-    #    prepGamma()
-
 
 ###########################################################################
 
