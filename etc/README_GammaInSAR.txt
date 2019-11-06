@@ -49,12 +49,12 @@ The files generated in this process include:
 
 1. Wrapped Interferogram (PNG images, KMZ file)
 2. Unwrapped Interferogram (GeoTIFF, PNG images, KMZ file)
-3. Line-of-Sight Displacement Map (GeoTIFF)
+3. Line-of-Sight Displacement Map (GeoTIFF) - *Optional*
 4. Vertical Displacement Map (GeoTIFF)
 5. Coherence Map (GeoTIFF)
 6. Amplitude Image (GeoTIFF)
-7. Parameters (Text File)
-8. Look Vector maps (GeoTIFFs)
+7. Parameter Documentation (Text File)
+8. Look Vector maps (GeoTIFFs) - *Optional*
 
 *See below for detailed descriptions of each of the product files.*
 
@@ -70,7 +70,7 @@ The wrapped interferogram files are tagged with _color_phase, and PNG files are 
 ----------------
 ## 2. Unwrapped Interferogram
 
-The unwrapped interferogram uses a reference point to convert the wrapped 2-pi scale into a continuous scale (of multiples of pi), and is the most important and complicated step in InSAR processing. It relies on having a reference point beyond the area of deformation, and is most effective when there are not any jumps greater than pi (a deformation greater than half the wavelength within the space of a single fringe). In regions of large magnitude deformations or extremely steep topography, the fringes may be too close together to resolve, or one fringe may actually represent a jump of multiple phase wraps. Gamma software uses algorithms to detect phase inconsistencies and treat them appropriately, but some deformations may still be too large to generate reliable data.
+The unwrapped interferogram uses a reference point to convert the wrapped 2-pi scale into a continuous scale (of multiples of pi), and is the most important and complicated step in InSAR processing. It relies on having a reference point beyond the area of deformation, and is most effective when there are not any jumps greater than pi (a deformation greater than half the wavelength within the space of a single fringe). In regions of large-magnitude deformations or extremely steep topography, the fringes may be too close together to resolve, or one fringe may actually represent a jump of multiple phase wraps. Gamma software uses algorithms to detect phase inconsistencies and treat them appropriately, but some deformations may still be too large to generate reliable data.
 
 The GeoTIFF contains the unwrapped values for each pixel, corresponding to the change in distance along the line of sight of the sensor. Positive values indicate movement away from the sensor (caused by subsidence or lateral movement away from the sensor) and negative values indicate movement towards the sensor (uplift or lateral movement towards the sensor). Note that deformation often includes both vertical and horizontal components, and additional processing or external reference data is required to calculate the relative contributions of vertical and lateral movement. 
 
@@ -82,6 +82,8 @@ The unwrapped interferogram files are tagged with _unw_phase, and the _unw_phase
 The LOS displacement map is in GeoTIFF format and converts the unwrapped differential phase into measurements of ground movement in meters along the look vector (line-of-sight). Positive values indicate movement towards the sensor (such as uplift), while negative values indicate movement away from the sensor (such as subsidence).
 
 The LOS displacement map is tagged with _los_disp.tif
+
+*Note that this file is optional. Select the "Include LOS Disp" option in the HyP3 Processing Options to include it in the product package.*
 
 ----------------
 ## 4. Vertical Displacement Map
@@ -107,7 +109,7 @@ The amplitude GeoTIFF indicates the calibrated radiometric backscatter from the 
 The amplitude image is tagged with _amp.tif
 
 ----------------
-## 7. Parameters Text File
+## 7. Parameter Documentation
 
 The text file included with the product lists the key processing parameters used, including the full granule names, baseline length, number of looks, output resolution, and source DEM information. Note that the DEM is down-sampled to twice the pixel spacing of the desired InSAR output pixel spacing; an 80-m InSAR product requires the DEM to be down-sampled to a pixel spacing of 160 m. 
 
@@ -121,6 +123,7 @@ The text file is not tagged; it has a .txt extension on the base filename.
 
 Two look vector maps are output with the product as GeoTIFFs. The lv_theta map indicates the SAR look vector elevation angle at each map pixel, ranging from -pi/2 (down) to pi/2 (up). The lv_phi map indicates the SAR look vector orientation angle at each map pixel, ranging from 0 (east) to pi/2 (north).
 
+*Note that these files are optional. Select the "Angle Maps" option in the HyP3 Processing Options to include them in the product package.*
 
 *************
 # InSAR Processing #
