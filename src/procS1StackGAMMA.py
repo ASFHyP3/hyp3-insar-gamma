@@ -46,7 +46,6 @@ import shutil
 from getSubSwath import get_bounding_box_file
 from ifm_sentinel import gammaProcess
 from execute import execute
-from osgeo import gdal
 from utm2dem import utm2dem
 from getDemFileGamma import getDemFileGamma
 import file_subroutines
@@ -167,7 +166,7 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
 
     # If no DEM is given, determine one from first file
     if dem is None:
-        dem, dem_source = getDemFileGamma(filename,use_opentopo,alooks,mask)
+        dem, dem_source = getDemFileGamma(filenames[0],use_opentopo,alooks,mask)
     else: 
         dem_source = "UNKNOWN"
 
