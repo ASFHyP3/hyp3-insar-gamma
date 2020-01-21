@@ -4,7 +4,7 @@ import logging
 import argparse
 from argparse import RawTextHelpFormatter
 from execute import execute
-from get_orb import getOrbFile
+from get_orb import downloadSentinelOrbitFile_2
 from getParameter import getParameter
 import sys, re, os
 import zipfile
@@ -97,20 +97,12 @@ def par_s1_slc(pol=None):
 
         logging.info("Getting precision orbit for file {}".format(myfile))
         try:
-            (orburl,tmp) = getOrbFile(myfile)
-            logging.info("{}".format(orburl))
-            cmd = 'wget ' + orburl
-            execute(cmd,uselogging=True)
-        except Exception as e:
-            print "Error: "+str(e)
-
-        try:
+            orbfile,tmp = downloadSentinelOrbitFile_2(myfile)
             execute("S1_OPOD_vec {}_001.slc.par *.EOF".format(acqdate))
             execute("S1_OPOD_vec {}_002.slc.par *.EOF".format(acqdate))
             execute("S1_OPOD_vec {}_003.slc.par *.EOF".format(acqdate))
         except Exception as e:
             print "Error: "+str(e)
-
 
         slc = glob.glob("*_00*.slc")
         slc.sort()
