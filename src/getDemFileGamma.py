@@ -15,9 +15,11 @@ def getDemFileGamma(filename,use_opentopo,alooks,mask):
     if not mask:
         # Make the UTM dem directly
         demfile,demtype = getDemFile(filename,"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
+        if not os.path.isfile(demfile):
+            logging.error("Got no return demfile ({}) from getDemfile".format(demfile))
+            exit(1)
     else:
         # Make a DEM
-	print "Calling getDemFile"
         ymax,ymin,xmax,xmin = get_bounding_box_file(filename)
         if (xmax >= 177 and xmin <= -177):
             logging.info("Using anti-meridian special code")
@@ -27,9 +29,9 @@ def getDemFileGamma(filename,use_opentopo,alooks,mask):
             tmpdem = "temp_mask_dem_{}.tif".format(os.getpid())
 
             # Apply the water body mask
-            logging.debug("Applying water body mask")
+            logging.info("Applying water body mask")
             apply_wb_mask(demfile,tmpdem,maskval=-32767,gcs=False)
-            logging.debug("Done with water body mask")
+            logging.info("Done with water body mask")
             shutil.move(tmpdem,demfile)
 
         else:
@@ -59,7 +61,7 @@ def getDemFileGamma(filename,use_opentopo,alooks,mask):
     # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
 
     pix_size = 20 * int(alooks) * 2;
-    logging.debug("Changing resolution")
+    logging.info("Changing resolution")
     gdal.Warp("tmpdem2.tif",demfile,xRes=pix_size,yRes=pix_size,resampleAlg="cubic",dstNodata=-32767,creationOptions=['COMPRESS=LZW'])
     os.remove(demfile)
 
