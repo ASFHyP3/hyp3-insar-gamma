@@ -36,6 +36,8 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     
     width = getParameter(offit,"interferogram_width")
     nline = getParameter(offit,"interferogram_azimuth_lines")
+    mwidth = getParameter(mmli+".par","range_samples")
+    swidth = getParameter(smli+".par","range_samples")
     demw = getParameter(dempar,"width")
     demn = getParameter(dempar,"nlines")
     
@@ -47,6 +49,12 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     logging.info("            Start unwrapping")
     logging.info("-------------------------------------------------")
 
+    cmd = "cc_wave {IFGF} {MMLI} - {IFG}.cc {W}".format(IFGF=ifgf,IFG=ifgname,MMLI=mmli,W=width)
+    execute(cmd,uselogging=True)
+ 
+    cmd = "rascc {IFG}.cc {MMLI} {W} 1 1 0 1 1 .1 .9 - - - {IFG}.cc.ras".format(IFG=ifgname,MMLI=mmli,W=width)
+    execute(cmd,uselogging=True)
+    
     cmd = "adf {IFGF} {IFGF}.adf {IFG}.adf.cc {W} {A} - 5".format(IFGF=ifgf,IFG=ifgname,W=width,A=alpha)
     execute(cmd,uselogging=True)
     
@@ -90,13 +98,14 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     logging.info("            Start geocoding")
     logging.info("-------------------------------------------------")
     
-    geocode_back(mmli,mmli+".geo",width,lt,demw,demn,0)
-    geocode_back(smli,smli+".geo",width,lt,demw,demn,0)
+    geocode_back(mmli,mmli+".geo",mwidth,lt,demw,demn,0)
+    geocode_back(smli,smli+".geo",swidth,lt,demw,demn,0)
     geocode_back("{}.sim_unw".format(ifgname),"{}.sim_unw.geo".format(ifgname),width,lt,demw,demn,0)
     geocode_back("{}.adf.unw".format(ifgname),"{}.adf.unw.geo".format(ifgname),width,lt,demw,demn,0)
     geocode_back("{}.adf".format(ifgf),"{}.adf.geo".format(ifgf),width,lt,demw,demn,1)
     geocode_back("{}.adf.unw.ras".format(ifgname),"{}.adf.unw.geo.bmp".format(ifgname),width,lt,demw,demn,2)
     geocode_back("{}.adf.bmp".format(ifgf),"{}.adf.bmp.geo".format(ifgf),width,lt,demw,demn,2)
+    geocode_back("{}.cc".format(ifgname),"{}.cc.geo".format(ifgname),width,lt,demw,demn,0)
     geocode_back("{}.adf.cc".format(ifgname),"{}.adf.cc.geo".format(ifgname),width,lt,demw,demn,0)
     geocode_back("{}.vert.disp.bmp".format(ifgname),"{}.vert.disp.bmp.geo".format(ifgname),width,lt,demw,demn,2)
     geocode_back("{}.vert.disp".format(ifgname),"{}.vert.disp.geo".format(ifgname),width,lt,demw,demn,0)
@@ -109,6 +118,7 @@ def unwrapping_geocoding(master, slave, step="man", rlooks=10, alooks=2, trimode
     data2geotiff("{}.adf.unw.geo".format(ifgname),"{}.adf.unw.geo.tif".format(ifgname),dempar,2)
     data2geotiff("{}.adf.unw.geo.bmp".format(ifgname),"{}.adf.unw.geo.bmp.tif".format(ifgname),dempar,0)
     data2geotiff("{}.adf.bmp.geo".format(ifgf),"{}.adf.bmp.geo.tif".format(ifgf),dempar,0)
+    data2geotiff("{}.cc.geo".format(ifgname),"{}.cc.geo.tif".format(ifgname),dempar,2)
     data2geotiff("{}.adf.cc.geo".format(ifgname),"{}.adf.cc.geo.tif".format(ifgname),dempar,2)
     data2geotiff("DEM/demseg","{}.dem.tif".format(ifgname),dempar,2)
     data2geotiff("{}.vert.disp.bmp.geo".format(ifgname),"{}.vert.disp.geo.tif".format(ifgname),dempar,0)

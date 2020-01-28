@@ -45,8 +45,7 @@ from par_s1_slc import par_s1_slc
 from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
 from unwrapping_geocoding import unwrapping_geocoding
 from execute import execute
-from utm2dem import utm2dem
-from getDemFor import getDemFile
+from getDemFileGamma import getDemFileGamma
 from osgeo import gdal
 from lxml import etree
 from makeAsfBrowse import makeAsfBrowse
@@ -59,26 +58,6 @@ def process_log(msg):
     global proc_log
     time =  datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") 
     proc_log.write("{} - {}\n".format(time,msg))
-
-def getDemFileGamma(filename,use_opentopo,alooks):
-    demfile, type = getDemFile(filename,"tmpdem.tif",opentopoFlag=use_opentopo,utmFlag=True)
-
-    # If we downsized the SAR image, downsize the DEM file
-    # if alks == 1, then the SAR image is roughly 20 m square -> use native dem res
-    # if alks == 2, then the SAR image is roughly 40 m square -> set dem to 80 meters
-    # if alks == 3, then the SAR image is roughly 60 m square -> set dem to 120 meters 
-    # etc.
-    #
-    # The DEM is set to double the res because it will be 1/2'd by the procedure
-    # I.E. if you give a 100 meter DEM as input, the output Igram is 50 meters
-
-    gdal.Warp("tmpdem2.tif","tmpdem.tif",xRes=pix_size,yRes=pix_size,resampleAlg="average")
-    os.remove("tmpdem.tif")    
-    if use_opentopo == True:
-      utm2dem("tmpdem2.tif","big.dem","big.par",dataType="int16")
-    else:
-      utm2dem("tmpdem2.tif","big.dem","big.par")
-    return("big",type)
 
 def getBursts(mydir,name):
     back = os.getcwd()
@@ -230,10 +209,18 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
     outName = "{}_amp.tif".format(os.path.join(prod_dir,long_output))
     shutil.copy(inName,outName)
 
-    inName = "{}.adf.cc.geo.tif".format(os.path.join(outdir,output))
+    inName = "{}.cc.geo.tif".format(os.path.join(outdir,output))
     outName = "{}_corr.tif".format(os.path.join(prod_dir,long_output))
     if os.path.isfile(inName):
         shutil.copy(inName,outName)
+
+# This code uses the filered coherence output from adf command:
+#
+#    inName = "{}.adf.cc.geo.tif".format(os.path.join(outdir,output))
+#    outName = "{}_corr.tif".format(os.path.join(prod_dir,long_output))
+#    if os.path.isfile(inName):
+#        shutil.copy(inName,outName)
+#
 
     inName = "{}.vert.disp.geo.org.tif".format(os.path.join(outdir,output))
     outName = "{}_vert_disp.tif".format(os.path.join(prod_dir,long_output))
@@ -266,6 +253,7 @@ def move_output_files(outdir,output,master,prod_dir,long_output,los_flag,inc_fla
     
     makeAsfBrowse("{}.adf.unw.geo.bmp.tif".format(os.path.join(outdir,output)),
                   "{}_unw_phase".format(os.path.join(prod_dir,long_output)))
+
 
 
 def create_readme_file(refFile,secFile,outfile,pixelSize):
@@ -382,7 +370,7 @@ def gammaProcess(masterFile,slaveFile,outdir,dem=None,rlooks=10,alooks=2,inc_fla
     # 
     process_log("Getting a DEM file")
     if dem is None:
-        dem, dem_source = getDemFileGamma(masterFile,ot_flag,alooks)
+        dem, dem_source = getDemFileGamma(masterFile,ot_flag,alooks,True)
     else:
         dem_source = "Unknown"
 
