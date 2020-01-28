@@ -499,7 +499,7 @@ if __name__ == '__main__':
 
   logFile = "ifm_sentinel_log.txt"
   logging.basicConfig(filename=logFile,format='%(asctime)s - %(levelname)s - %(message)s',
-                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.DEBUG)
+                        datefmt='%m/%d/%Y %I:%M:%S %p',level=logging.INFO)
   logging.getLogger().addHandler(logging.StreamHandler())
   logging.info("Starting run")
 
