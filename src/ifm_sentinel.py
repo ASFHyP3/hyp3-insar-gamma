@@ -174,8 +174,8 @@ def getFileType(myfile):
     elif "SSV" in myfile:
         type = "SSV"
         pol = "vv"
-    elif "SDV" in myfile:
-        type = "SSV"
+    elif "SSH" in myfile:
+        type = "SSH"
         pol = "hh"
     return(type,pol)
 
