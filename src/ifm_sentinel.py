@@ -153,7 +153,7 @@ def getBurstOverlaps(masterDir,slaveDir):
             size1 = total_bursts1 - start1 + 1
             size2 = total_bursts2 - start2 + 1
         except:
-            logging.error("ERROR: Unable to find bust overlap")
+            logging.error("ERROR: Unable to find burst overlap")
             exit(2)
 
         if (size1 > size2):
