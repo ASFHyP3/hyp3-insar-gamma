@@ -206,8 +206,9 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
                         masterFile = myfile
                     if slave in myfile:
                         slaveFile = myfile
-                gammaProcess(masterFile,slaveFile,"IFM",dem=dem,rlooks=rlooks,alooks=alooks,
-                  inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag,time=time)
+                gammaProcess(masterFile,slaveFile,"IFM",dem=dem,dem_source=dem_source,rlooks=rlooks,
+                             alooks=alooks,inc_flag=inc_flag,look_flag=look_flag,los_flag=los_flag,
+                             time=time)
                 makeParameterFile(mydir,alooks,rlooks,dem_source)
                 os.chdir("..")
                 for myfile in glob.glob("{}/PRODUCT/*".format(mydir)):
