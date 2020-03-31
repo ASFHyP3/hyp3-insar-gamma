@@ -49,7 +49,7 @@ from unwrapping_geocoding import unwrapping_geocoding
 from execute import execute
 from getDemFileGamma import getDemFileGamma
 from makeAsfBrowse import makeAsfBrowse
-from create_metadata_isce import create_readme_file
+from create_metadata import create_readme_file
 
 global lasttime
 global log
