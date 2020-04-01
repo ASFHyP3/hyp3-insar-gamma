@@ -40,6 +40,7 @@ import datetime
 import time
 import glob
 import shutil
+from lxml import etree
 from interf_pwr_s1_lt_tops_proc import interf_pwr_s1_lt_tops_proc
 from par_s1_slc import par_s1_slc
 from SLC_copy_S1_fullSW import SLC_copy_S1_fullSW
