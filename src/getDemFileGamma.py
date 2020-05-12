@@ -46,7 +46,7 @@ def getDemFileGamma(filename,use_opentopo,alooks,mask):
             apply_wb_mask(demfile,tmpdem,maskval=-32767,gcs=True)
      
             # Reproject DEM file into UTM coordinates
-	    pixsize = 30.0
+            pixsize = 30.0
             if demtype == "SRTMGL3":
                 pixsize = 90.
             if demtype == "NED2":

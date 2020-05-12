@@ -144,11 +144,11 @@ def makeParameterFile(mydir,alooks,rlooks,dem_source):
 ###########################################################################
 #  Main entry point --
 #
-# 	alooks = azimuth looks
-#	rlooks = range looks
-#	file = name of CSV file use to for get_asf.py
-#	dem = name of external DEM file 
-#	use_opentopo = flag for using opentopo instead of get_dem
+#       alooks = azimuth looks
+#       rlooks = range looks
+#       file = name of CSV file use to for get_asf.py
+#       dem = name of external DEM file 
+#       use_opentopo = flag for using opentopo instead of get_dem
 #
 ###########################################################################
 def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
@@ -193,8 +193,8 @@ def procS1StackGAMMA(alooks=4,rlooks=20,csvFile=None,dem=None,use_opentopo=None,
         if not os.path.exists("PRODUCTS"):
             os.mkdir("PRODUCTS")
         first = 1
-	dirs = os.listdir(".")
-	dirs.sort
+        dirs = os.listdir(".")
+        dirs.sort
         for mydir in dirs:
             if len(mydir) == 31 and os.path.isdir(mydir) and "_20" in mydir:
                 logging.info("Processing directory %s" % mydir)
