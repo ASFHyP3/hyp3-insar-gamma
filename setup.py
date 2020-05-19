@@ -51,6 +51,9 @@ setup(
     entry_points={'console_scripts': [
             'hyp3_insar_gamma = hyp3_insar_gamma.__main__:main',
             'procS1StackGAMMA.py = hyp3_insar_gamma.stack_sentinel:main',
+            'ifm_sentinel.py = hyp3_insar_gamma.ifm_sentinel:main',
+            'interf_pwr_s1_lt_tops_proc.py = hyp3_insar_gamma.interf_pwr_s1_lt_tops_proc:main',
+            'unwrapping_geocoding.py = hyp3_insar_gamma.unwrapping_geocoding:main',
         ]
     },
 
