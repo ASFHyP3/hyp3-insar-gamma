@@ -35,6 +35,7 @@ setup(
         'hyp3lib',
         'hyp3proclib',
         'importlib_metadata',
+        'lxml',
     ],
 
     extras_require={
@@ -49,7 +50,7 @@ setup(
 
     entry_points={'console_scripts': [
             'hyp3_insar_gamma = hyp3_insar_gamma.__main__:main',
-            'proc_insar_gamma = hyp3_insar_gamma.process:main',
+            'procS1StackGAMMA.py = hyp3_insar_gamma.stack_sentinel:main',
         ]
     },
 
