@@ -53,6 +53,7 @@ setup(
             'procS1StackGAMMA.py = hyp3_insar_gamma.stack_sentinel:main',
             'ifm_sentinel.py = hyp3_insar_gamma.ifm_sentinel:main',
             'interf_pwr_s1_lt_tops_proc.py = hyp3_insar_gamma.interf_pwr_s1_lt_tops_proc:main',
+            'par_s1_slc.py = hyp3_insar_gamma.par_s1_slc:main',
             'unwrapping_geocoding.py = hyp3_insar_gamma.unwrapping_geocoding:main',
         ]
     },
