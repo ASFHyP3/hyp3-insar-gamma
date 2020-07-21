@@ -9,7 +9,7 @@ with open(os.path.join(_HERE, 'README.md'), 'r') as f:
 setup(
     name='hyp3_insar_gamma',
     use_scm_version=True,
-    description='A HyP3 plugin to produce interferograms from a stack of Sentinel-1 data using GAMMA',
+    description='HyP3 plugin to produce interferograms from a stack of Sentinel-1 data using GAMMA',
     long_description=long_desc,
     long_description_content_type='text/markdown',
 
@@ -32,8 +32,8 @@ setup(
     python_requires='~=3.6',
 
     install_requires=[
-        'hyp3lib~=1.1',
-        'hyp3proclib~=1.0',
+        'hyp3lib>=1.4.1,<2',
+        'hyp3proclib>=1.0.1,<2',
         'importlib_metadata',
         'lxml',
     ],
