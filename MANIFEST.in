@@ -4,4 +4,3 @@ include README.md
 graft hyp3_insar_gamma
 
 global-exclude *.py[cod] __pycache__ *.so
-

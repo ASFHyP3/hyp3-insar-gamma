@@ -150,8 +150,8 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          aws s3 cp s3://hyp3-docker/software/GAMMA_SOFTWARE-20191203_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz .
-          tar -zxvf GAMMA_SOFTWARE-20191203_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz
+          aws s3 cp s3://hyp3-docker/software/GAMMA_SOFTWARE-20191203-PATCHED_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz .
+          tar -zxvf GAMMA_SOFTWARE-20191203-PATCHED_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz
 
           export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
           export CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)
