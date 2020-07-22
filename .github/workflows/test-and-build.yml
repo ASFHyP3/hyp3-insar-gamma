@@ -34,7 +34,7 @@ jobs:
       - name: Pytest in conda environment
         shell: bash -l {0}
         run: |
-          python -m pip install .
+          python -m pip install .[develop]
           pytest --cov=hyp3_insar_gamma
 
       - name: Safety analysis of conda environment
@@ -64,7 +64,7 @@ jobs:
         with:
           query: .github/queries/asssociated-pr.query.yml
           outputFile: pr.json
-          owner: asfadmin
+          owner: ASFHyP3
           name: hyp3-insar-gamma
           sha: ${{ github.sha }}
 
@@ -76,7 +76,7 @@ jobs:
         with:
           query: .github/queries/pr-labels.query.yml
           outputFile: labels.json
-          owner: asfadmin
+          owner: ASFHyP3
           name: hyp3-insar-gamma
 
       - name: Upload a Build Artifact
@@ -150,8 +150,8 @@ jobs:
 
       - name: Build, tag, and push image to Amazon ECR
         run: |
-          aws s3 cp s3://hyp3-docker/software/GAMMA_SOFTWARE-20191203_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz .
-          tar -zxvf GAMMA_SOFTWARE-20191203_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz
+          aws s3 cp s3://hyp3-docker/software/GAMMA_SOFTWARE-20191203-PATCHED_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz .
+          tar -zxvf GAMMA_SOFTWARE-20191203-PATCHED_MSP_ISP_DIFF_LAT.linux64_ubuntu1804.tar.gz
 
           export SDIST_VERSION=${{ needs.package.outputs.SDIST_VERSION }}
           export CI_JOB_TIMESTAMP=$(date --utc --rfc-3339=seconds)
