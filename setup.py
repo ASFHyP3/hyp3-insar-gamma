@@ -37,6 +37,7 @@ setup(
         'hyp3proclib>=1.0.1,<2',
         'importlib_metadata',
         'lxml',
+        'pillow'
     ],
 
     extras_require={
