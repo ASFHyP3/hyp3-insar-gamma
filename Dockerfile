@@ -64,5 +64,5 @@ ENV GAMMA_RASTER=BMP
 
 WORKDIR /home/conda/
 
-ENTRYPOINT ["/usr/local/bin/hyp3_insar_gamma"]
+ENTRYPOINT ["/usr/local/bin/insar_gamma"]
 CMD ["-h"]

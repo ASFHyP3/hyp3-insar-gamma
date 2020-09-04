@@ -32,10 +32,12 @@ setup(
     python_requires='~=3.6',
 
     install_requires=[
-        'hyp3lib>=1.4.1,<2',
+        'boto3',
+        'hyp3lib>=1.5.0,<2',
         'hyp3proclib>=1.0.1,<2',
         'importlib_metadata',
         'lxml',
+        'pillow'
     ],
 
     extras_require={
@@ -49,7 +51,9 @@ setup(
     packages=find_packages(),
 
     entry_points={'console_scripts': [
+            'insar_gamma = hyp3_insar_gamma.__main__:entry',
             'hyp3_insar_gamma = hyp3_insar_gamma.__main__:main',
+            'hyp3_insar_gamma_v2 = hyp3_insar_gamma.__main__:main_v2',
             'procS1StackGAMMA.py = hyp3_insar_gamma.stack_sentinel:main',
             'ifm_sentinel.py = hyp3_insar_gamma.ifm_sentinel:main',
             'interf_pwr_s1_lt_tops_proc.py = hyp3_insar_gamma.interf_pwr_s1_lt_tops_proc:main',
