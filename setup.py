@@ -33,7 +33,7 @@ setup(
 
     install_requires=[
         'boto3',
-        'hyp3lib>=1.5.0,<2',
+        'hyp3lib==1.5.0,<2',
         'hyp3proclib>=1.0.1,<2',
         'importlib_metadata',
         'lxml',
@@ -54,7 +54,6 @@ setup(
             'insar_gamma = hyp3_insar_gamma.__main__:main',
             'ifm_sentinel.py = hyp3_insar_gamma.ifm_sentinel:main',
             'interf_pwr_s1_lt_tops_proc.py = hyp3_insar_gamma.interf_pwr_s1_lt_tops_proc:main',
-            'par_s1_slc.py = hyp3_insar_gamma.par_s1_slc:main',
             'unwrapping_geocoding.py = hyp3_insar_gamma.unwrapping_geocoding:main',
         ]
     },
