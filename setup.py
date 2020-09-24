@@ -51,10 +51,7 @@ setup(
     packages=find_packages(),
 
     entry_points={'console_scripts': [
-            'insar_gamma = hyp3_insar_gamma.__main__:entry',
-            'hyp3_insar_gamma = hyp3_insar_gamma.__main__:main',
-            'hyp3_insar_gamma_v2 = hyp3_insar_gamma.__main__:main_v2',
-            'procS1StackGAMMA.py = hyp3_insar_gamma.stack_sentinel:main',
+            'insar_gamma = hyp3_insar_gamma.__main__:main',
             'ifm_sentinel.py = hyp3_insar_gamma.ifm_sentinel:main',
             'interf_pwr_s1_lt_tops_proc.py = hyp3_insar_gamma.interf_pwr_s1_lt_tops_proc:main',
             'par_s1_slc.py = hyp3_insar_gamma.par_s1_slc:main',
